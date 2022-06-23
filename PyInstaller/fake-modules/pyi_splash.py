@@ -90,7 +90,7 @@ def _initialize():
         _initialized = True
         _log(20, "A connection to the splash screen was successfully established.")  # log-level: info
     except OSError as err:
-        raise ConnectionError("Unable to connect to the tcp server socket on port %d" % _ipc_port) from err
+        raise ConnectionError("Unable to connect to the tcp server socket on port %d" % _ipc_port) #from err
 
 
 # We expect a splash screen from the bootloader, but if _PYIBoot_SPLASH is not set, the module cannot connect to it.
@@ -158,7 +158,7 @@ def _send_command(cmd, args=None):
     try:
         _ipc_socket.sendall(full_cmd.encode("utf-8") + FLUSH_CHARACTER)
     except OSError as err:
-        raise ConnectionError("Unable to send '%s' to the bootloader" % full_cmd) from err
+        raise ConnectionError("Unable to send '%s' to the bootloader" % full_cmd) #from err
 
 
 def is_alive():

@@ -98,7 +98,7 @@ class PyiFrozenProvider(pkg_resources.NullProvider):
     Custom pkg_resourvces provider for FrozenImporter.
     """
     def __init__(self, module):
-        super().__init__(module)
+        super(PyiFrozenProvider,self).__init__(module)
 
         # Get top-level path; if "module" corresponds to a package, we need the path to the package itself. If "module"
         # is a submodule in a package, we need the path to the parent package.

@@ -20,7 +20,7 @@ from PyInstaller.depend.bindepend import findSystemLibrary
 logger = logging.getLogger(__name__)
 
 
-@isolated.decorate
+# @isolated.decorate
 def get_gi_libdir(module, version):
     import os
     import gi
@@ -53,7 +53,7 @@ def get_gi_typelibs(module, version):
     binaries = []
     hiddenimports = []
 
-    @isolated.decorate
+    # @isolated.decorate
     def _gi_typelibs(module, version):
         import gi
         gi.require_version("GIRepository", "2.0")
@@ -131,11 +131,11 @@ def gir_library_path_fix(path):
             )
             return None
 
-        with open(gir_file, 'r', encoding='utf-8') as f:
+        with open(gir_file, 'r', ) as f: # FIXME(EK) encoding
             lines = f.readlines()
         # GIR files are `XML encoded <https://developer.gnome.org/gi/stable/gi-gir-reference.html>`_,
         # which means they are by definition encoded using UTF-8.
-        with open(os.path.join(CONF['workpath'], gir_name), 'w', encoding='utf-8') as f:
+        with open(os.path.join(CONF['workpath'], gir_name), 'w', ) as f: # FIXME(EK) encoding
             for line in lines:
                 if 'shared-library' in line:
                     split = re.split('(=)', line)
@@ -158,7 +158,7 @@ def gir_library_path_fix(path):
         return path, 'gi_typelibs'
 
 
-@isolated.decorate
+# @isolated.decorate
 def get_glib_system_data_dirs():
     import gi
     gi.require_version('GLib', '2.0')
@@ -175,7 +175,7 @@ def get_glib_sysconf_dirs():
         # that is what we are actually interested in (not the user path), we have to do that the hard way...
         return [os.path.join(get_gi_libdir('GLib', '2.0'), 'etc')]
 
-    @isolated.call
+    # @isolated.call
     def data_dirs():
         import gi
         gi.require_version('GLib', '2.0')

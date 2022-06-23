@@ -22,7 +22,7 @@
 # **NOTE** This module is used during bootstrap.
 # Import *ONLY* builtin modules.
 
-import _thread as thread
+import thread
 import marshal
 import struct
 import sys
@@ -262,7 +262,7 @@ class ZlibArchiveReader(ArchiveReader):
             else:
                 offset = 0
 
-        super().__init__(path, offset)
+        super(ZlibArchiveReader,self).__init__(path, offset)
 
         # Try to import the key module. Its lack of availability indicates that the encryption is disabled.
         try:
@@ -297,5 +297,5 @@ class ZlibArchiveReader(ArchiveReader):
             if typ in (PYZ_TYPE_MODULE, PYZ_TYPE_PKG, PYZ_TYPE_NSPKG):
                 obj = marshal.loads(obj)
         except EOFError as e:
-            raise ImportError("PYZ entry '%s' failed to unmarshal" % name) from e
+            raise ImportError("PYZ entry '%s' failed to unmarshal" % name) #from e
         return typ, obj

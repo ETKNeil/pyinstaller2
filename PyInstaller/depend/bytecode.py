@@ -19,10 +19,9 @@ defined once then simply referenced forming a nice hierarchy rather than copied 
 import dis
 import re
 from types import CodeType
-from typing import Pattern
 
 
-def _instruction_to_regex(x: str):
+def _instruction_to_regex(x):
     """
     Get a regex-escaped opcode byte from its human readable name.
     """
@@ -35,7 +34,7 @@ def _instruction_to_regex(x: str):
     return re.escape(bytes([dis.opmap[x]]))
 
 
-def bytecode_regex(pattern: bytes, flags=re.VERBOSE | re.DOTALL):
+def bytecode_regex(pattern, flags=re.VERBOSE | re.DOTALL):
     """
     A regex-powered Python bytecode matcher.
 
@@ -50,14 +49,14 @@ def bytecode_regex(pattern: bytes, flags=re.VERBOSE | re.DOTALL):
 
     # Replace anything wrapped in backticks with regex-escaped opcodes.
     pattern = re.sub(
-        rb"`(\w+)`",
-        lambda m: _instruction_to_regex(m[1].decode()),
+        r"`(\w+)`",
+        lambda m: _instruction_to_regex(m.group(1).decode()),
         pattern,
     )
     return re.compile(pattern, flags=flags)
 
 
-def finditer(pattern: Pattern, string):
+def finditer(pattern, string):
     """
     Call ``pattern.finditer(string)``, but remove any matches beginning on an odd byte (i.e., matches where
     match.start() is not a multiple of 2).
@@ -83,7 +82,7 @@ def finditer(pattern: Pattern, string):
 
 # language=PythonVerboseRegExp
 _call_function_bytecode = bytecode_regex(
-    rb"""
+    r"""
     # Matches `global_function('some', 'constant', 'arguments')`.
 
     # Load the global function. In code with >256 of names, this may require extended name references.
@@ -102,13 +101,14 @@ _call_function_bytecode = bytecode_regex(
     # Call the function. The parameter is the argument count (which may also be >256) if CALL_FUNCTION or CALL_METHOD
     # are used. For CALL_FUNCTION_EX, the parameter are flags.
     ((?:`EXTENDED_ARG`.)*
-     (?:`CALL_FUNCTION`|`CALL_METHOD`|`CALL_FUNCTION_EX`).)
+     (?:`CALL_FUNCTION`|`CALL_METHOD`).)
 """
+    # removed | `CALL_FUNCTION_EX` (3.6+)
 )
 
 # language=PythonVerboseRegExp
 _extended_arg_bytecode = bytecode_regex(
-    rb"""(
+    r"""(
     # Arbitrary number of EXTENDED_ARG pairs.
     (?:`EXTENDED_ARG`.)*
 
@@ -118,7 +118,7 @@ _extended_arg_bytecode = bytecode_regex(
 )
 
 
-def extended_arguments(extended_args: bytes):
+def extended_arguments(extended_args):
     """
     Unpack the (extended) integer used to reference names or constants.
 
@@ -132,7 +132,7 @@ def extended_arguments(extended_args: bytes):
     return int.from_bytes(extended_args[1::2], "big")
 
 
-def load(raw: bytes, code: CodeType) -> str:
+def load(raw, code):
     """
     Parse an (extended) LOAD_xxx instruction.
     """
@@ -153,7 +153,7 @@ def load(raw: bytes, code: CodeType) -> str:
     return code.co_names[index]
 
 
-def loads(raw: bytes, code: CodeType) -> list:
+def loads(raw, code) :
     """
     Parse multiple consecutive LOAD_xxx instructions. Or load() in a for loop.
 
@@ -162,11 +162,10 @@ def loads(raw: bytes, code: CodeType) -> list:
     return [load(i, code) for i in _extended_arg_bytecode.findall(raw)]
 
 
-def function_calls(code: CodeType) -> list:
+def function_calls(code) :
     """
     Scan a code object for all function calls on constant arguments.
     """
-    match: re.Match
     out = []
 
     for match in finditer(_call_function_bytecode, code.co_code):
@@ -203,7 +202,7 @@ def function_calls(code: CodeType) -> list:
     return out
 
 
-def search_recursively(search: callable, code: CodeType, _memo=None) -> dict:
+def search_recursively(search, code, _memo=None):
     """
     Apply a search function to a code object, recursing into child code objects (function definitions).
     """
@@ -217,7 +216,7 @@ def search_recursively(search: callable, code: CodeType, _memo=None) -> dict:
     return _memo
 
 
-def recursive_function_calls(code: CodeType) -> dict:
+def recursive_function_calls(code) :
     """
     Scan a code object for function calls on constant arguments, recursing into function definitions and bodies of
     comprehension loops.
@@ -225,7 +224,7 @@ def recursive_function_calls(code: CodeType) -> dict:
     return search_recursively(function_calls, code)
 
 
-def any_alias(full_name: str):
+def any_alias(full_name):
     """List possible aliases of a fully qualified Python name.
 
         >>> list(any_alias("foo.bar.wizz"))

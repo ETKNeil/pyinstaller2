@@ -143,7 +143,7 @@ def convert_dll_name_to_str(dll_name):
     """
     # Imported here to avoid circular import.
     if isinstance(dll_name, bytes):
-        return str(dll_name, encoding='UTF-8')
+        return str(dll_name, ) # FIXME(EK) encoding
     else:
         return dll_name
 

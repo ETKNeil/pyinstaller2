@@ -1,4 +1,4 @@
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Copyright (c) 2005-2022, PyInstaller Development Team.
 #
 # Distributed under the terms of the GNU General Public License (version 2
@@ -7,16 +7,15 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 #
 # SPDX-License-Identifier: (GPL-2.0-or-later WITH Bootloader-exception)
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 import sys
 import os
 import subprocess
-from typing import Type
 
 from setuptools import setup, find_packages
 
-#-- plug-in building the bootloader
+# -- plug-in building the bootloader
 
 from distutils.core import Command
 from distutils.command.build import build
@@ -68,9 +67,10 @@ class build_bootloader(Command):
             return
         if self.bootloader_exists() and not os.environ.get("PYINSTALLER_COMPILE_BOOTLOADER"):
             return
+        import sys
         print(
             'No precompiled bootloader found or compile forced. Trying to compile the bootloader for you ...',
-            file=sys.stderr
+            sys.stderr
         )
         self.compile_bootloader()
 
@@ -103,20 +103,21 @@ class Wheel(bdist_wheel):
 
         if not self.has_bootloaders():
             raise SystemExit(
-                f"Error: No bootloaders for {self.PLAT_NAME} found in {self.bootloaders_dir()}. See "
-                f"https://pyinstaller.readthedocs.io/en/stable/bootloader-building.html for how to compile them."
+                "Error: No bootloaders for {self.PLAT_NAME} found in {self.bootloaders_dir()}. See "
+                "https://pyinstaller.readthedocs.io/en/stable/bootloader-building.html for how to compile them."
             )
-
+        l = [
+            # And add the correct bootloaders as data files.
+            "bootloader/{}/*".format(self.PYI_PLAT_NAME),
+        ]
+        for suffix in self.ICON_TYPES:
+            l.append("bootloader/images/*.{}".format(suffix))
+        # These files need to be explicitly included as well.
+        l.extend(["fake-modules/*.py",
+                  "hooks/rthooks.dat",
+                  "lib/README.rst", ])
         self.distribution.package_data = {
-            "PyInstaller": [
-                # And add the correct bootloaders as data files.
-                f"bootloader/{self.PYI_PLAT_NAME}/*",
-                *(f"bootloader/images/*.{suffix}" for suffix in self.ICON_TYPES),
-                # These files need to be explicitly included as well.
-                "fake-modules/*.py",
-                "hooks/rthooks.dat",
-                "lib/README.rst",
-            ],
+            "PyInstaller": l,
         }
         super().finalize_options()
 
@@ -131,7 +132,7 @@ class Wheel(bdist_wheel):
         """
         Locate the bootloader folder inside the PyInstaller package.
         """
-        return f"PyInstaller/bootloader/{cls.PYI_PLAT_NAME}"
+        return "PyInstaller/bootloader/{}".format(cls.PYI_PLAT_NAME)
 
     @classmethod
     def has_bootloaders(cls):
@@ -161,17 +162,49 @@ PLATFORMS = {
     # macOS needs special handling. This gets done dynamically later.
     "Darwin-64bit": None,
 }
+class bdist_wheels(Command):
+    """
+    Build a wheel for every platform listed in the PLATFORMS dict, which has bootloaders available in
+    `PyInstaller/bootloaders/[platform-name]`.
+    """
+    description = "Build all available wheel types"
 
+    # Overload these to keep the abstract metaclass happy.
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        for (name, command) in wheel_commands.items():
+            if not command.has_bootloaders():
+                print("Skipping", name, "because no bootloaders were found in", command.bootloaders_dir())
+                continue
+
+            print("running", name)
+            # This should be `self.run_command(name)`, but there is some aggressive caching from distutils, which has
+            # to be suppressed by us using forced cleaning. One distutils behaviour that seemingly cannot be disabled
+            # is that each command should only run once - this is at odds with what we want, because we need to run
+            # 'build' for every platform. The only way I can get it not to skip subsequent builds is to isolate the
+            # processes completely using subprocesses...
+            subprocess.run([sys.executable, __file__, "-q", name], stderr=subprocess.PIPE, check=True)
 # Create a subclass of Wheel() for each platform.
-wheel_commands = {}
+wheel_commands = {
+        'build_bootloader': build_bootloader,
+        'build': MyBuild,
+        'bdist_wheels': bdist_wheels,
+}
 for (pyi_plat_name, plat_name) in PLATFORMS.items():
     # This is the name it will have on the setup.py command line.
     command_name = "wheel_" + pyi_plat_name.replace("-", "_").lower()
 
     # Create and register the subclass, overriding the PLAT_NAME and PYI_PLAT_NAME attributes.
     platform = {"PLAT_NAME": plat_name, "PYI_PLAT_NAME": pyi_plat_name}
-    command: Type[Wheel] = type(command_name, (Wheel,), platform)
-    command.description = f"Create a {command.PYI_PLAT_NAME} wheel"
+    command = type(command_name, (Wheel,object), platform)
+    command.description = "Create a {} wheel".format(command.PYI_PLAT_NAME)
     wheel_commands[command_name] = command
 
 
@@ -206,7 +239,7 @@ class bdist_macos(wheel_commands["wheel_darwin_64bit"]):
         # Fetch the macOS deployment target the bootloaders are compiled with and set that in the tag too.
         version = "_".join(map(str, macosx_version_min(bootloader)[:2]))
 
-        self.PLAT_NAME = f"macosx_{version}_{architectures}"
+        self.PLAT_NAME = "macosx_{}_{}".format(version,architectures)
         super().finalize_options()
 
 
@@ -216,48 +249,14 @@ wheel_commands["wheel_darwin_64bit"].ICON_TYPES = ["icns"]
 wheel_commands["wheel_windows_32bit"].ICON_TYPES = wheel_commands["wheel_windows_64bit"].ICON_TYPES = ["ico"]
 
 
-class bdist_wheels(Command):
-    """
-    Build a wheel for every platform listed in the PLATFORMS dict, which has bootloaders available in
-    `PyInstaller/bootloaders/[platform-name]`.
-    """
-    description = "Build all available wheel types"
-
-    # Overload these to keep the abstract metaclass happy.
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self) -> None:
-        command: Type[Wheel]
-        for (name, command) in wheel_commands.items():
-            if not command.has_bootloaders():
-                print("Skipping", name, "because no bootloaders were found in", command.bootloaders_dir())
-                continue
-
-            print("running", name)
-            # This should be `self.run_command(name)`, but there is some aggressive caching from distutils, which has
-            # to be suppressed by us using forced cleaning. One distutils behaviour that seemingly cannot be disabled
-            # is that each command should only run once - this is at odds with what we want, because we need to run
-            # 'build' for every platform. The only way I can get it not to skip subsequent builds is to isolate the
-            # processes completely using subprocesses...
-            subprocess.run([sys.executable, __file__, "-q", name], stderr=subprocess.PIPE, check=True)
 
 
-#--
+
+# --
 
 setup(
     setup_requires=["setuptools >= 39.2.0"],
-    cmdclass={
-        'build_bootloader': build_bootloader,
-        'build': MyBuild,
-        **wheel_commands,
-        'bdist_wheels': bdist_wheels,
-    },
+    cmdclass=wheel_commands,
     packages=find_packages(include=["PyInstaller", "PyInstaller.*"]),
     package_data={
         "PyInstaller": [

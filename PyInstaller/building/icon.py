@@ -9,13 +9,15 @@
 # SPDX-License-Identifier: (GPL-2.0-or-later WITH Bootloader-exception)
 #-----------------------------------------------------------------------------
 
-from typing import Tuple
-
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
 import os
 import hashlib
 
 
-def normalize_icon_type(icon_path: str, allowed_types: Tuple[str], convert_type: str, workpath: str) -> str:
+def normalize_icon_type(icon_path, allowed_types, convert_type, workpath)  :
     """
     Returns a valid icon path or raises an Exception on error.
     Ensures that the icon exists, and, if necessary, attempts to convert it to correct OS-specific format using Pillow.
@@ -31,7 +33,7 @@ def normalize_icon_type(icon_path: str, allowed_types: Tuple[str], convert_type:
 
     # explicitly error if file not found
     if not os.path.exists(icon_path):
-        raise FileNotFoundError(f"Icon input file {icon_path} not found")
+        raise FileNotFoundError("Icon input file {} not found".format(icon_path))
 
     _, extension = os.path.splitext(icon_path)
     extension = extension[1:]  # get rid of the "." in ".whatever"
@@ -47,24 +49,24 @@ def normalize_icon_type(icon_path: str, allowed_types: Tuple[str], convert_type:
 
     except ImportError:
         raise ValueError(
-            f"Received icon image '{icon_path}' which exists but is not in the correct format. On this platform, "
-            f"only {allowed_types} images may be used as icons. If Pillow is installed, automatic conversion will "
-            f"be attempted. Please install Pillow or convert your '{extension}' file to one of {allowed_types} "
-            f"and try again."
+            "Received icon image '{icon_path}' which exists but is not in the correct format. On this platform, "
+            "only {allowed_types} images may be used as icons. If Pillow is installed, automatic conversion will "
+            "be attempted. Please install Pillow or convert your '{extension}' file to one of {allowed_types} "
+            "and try again."
         )
 
     # Let's try to use PIL to convert the icon file type
     try:
-        _generated_name = f"generated-{hashlib.sha256(icon_path.encode()).hexdigest()}.{convert_type}"
+        _generated_name = "generated-{}.{}".format(hashlib.sha256(icon_path.encode()).hexdigest(),convert_type)
         generated_icon = os.path.join(workpath, _generated_name)
         with PILImage.open(icon_path) as im:
             im.save(generated_icon)
         icon_path = generated_icon
     except PIL.UnidentifiedImageError:
         raise ValueError(
-            f"Something went wrong converting icon image '{icon_path}' to '.{convert_type}' with Pillow, "
-            f"perhaps the image format is unsupported. Try again with a different file or use a file that can "
-            f"be used without conversion on this platform: {allowed_types}"
+            "Something went wrong converting icon image '{icon_path}' to '.{convert_type}' with Pillow, "
+            "perhaps the image format is unsupported. Try again with a different file or use a file that can "
+            "be used without conversion on this platform: {allowed_types}"
         )
 
     return icon_path

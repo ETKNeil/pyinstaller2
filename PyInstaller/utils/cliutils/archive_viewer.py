@@ -32,7 +32,7 @@ def main(name, brief, debug, rec_debug, **unused_options):
     global stack
 
     if not os.path.isfile(name):
-        print(name, "is an invalid file name!", file=sys.stderr)
+        print(name, "is an invalid file name!", sys.stderr)
         return 1
 
     arch = get_archive(name)
@@ -48,7 +48,7 @@ def main(name, brief, debug, rec_debug, **unused_options):
             toks = stdin_input('? ').split(None, 1)
         except EOFError:
             # Ctrl-D
-            print(file=sys.stderr)  # Clear line.
+            print(sys.stderr)  # Clear line.
             break
         if not toks:
             usage()
@@ -72,10 +72,10 @@ def main(name, brief, debug, rec_debug, **unused_options):
             try:
                 arch = get_archive(arg)
             except NotAnArchiveError as e:
-                print(e, file=sys.stderr)
+                print(e, sys.stderr)
                 continue
             if arch is None:
-                print(arg, "not found", file=sys.stderr)
+                print(arg, "not found", sys.stderr)
                 continue
             stack.append((arg, arch))
             show(arg, arch)
@@ -85,7 +85,7 @@ def main(name, brief, debug, rec_debug, **unused_options):
             arg = arg.strip()
             data = get_data(arg, arch)
             if data is None:
-                print("Not found", file=sys.stderr)
+                print("Not found", sys.stderr)
                 continue
             filename = stdin_input('to filename? ')
             if not filename:
@@ -107,15 +107,15 @@ def do_cleanup():
         try:
             os.remove(filename)
         except Exception as e:
-            print("could not delete", filename, e.args, file=sys.stderr)
+            print("could not delete", filename, e.args, sys.stderr)
     cleanup = []
 
 
 def usage():
-    print("U: go up one level", file=sys.stderr)
-    print("O <name>: open embedded archive name", file=sys.stderr)
-    print("X <name>: extract name", file=sys.stderr)
-    print("Q: quit", file=sys.stderr)
+    print("U: go up one level", sys.stderr)
+    print("O <name>: open embedded archive name", sys.stderr)
+    print("X <name>: extract name", sys.stderr)
+    print("Q: quit", sys.stderr)
 
 
 def get_archive(name):
@@ -222,7 +222,7 @@ class ZlibArchive(pyimod02_archive.ZlibArchiveReader):
         if self.lib.read(len(self.MAGIC)) != self.MAGIC:
             raise RuntimeError("%s is not a valid %s archive file" % (self.path, self.__class__.__name__))
         if self.lib.read(len(self.pymagic)) != self.pymagic:
-            print("Warning: pyz is from a different Python version", file=sys.stderr)
+            print("Warning: pyz is from a different Python version", sys.stderr)
         self.lib.read(4)
 
 

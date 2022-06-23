@@ -230,7 +230,7 @@ class AppBuilder:
         def marker(line):
             # Print some marker to stdout and stderr to make it easier to distinguish the phases in the CI test output.
             print('-------', line, '-------')
-            print('-------', line, '-------', file=sys.stderr)
+            print('-------', line, '-------', sys.stderr)
 
         if pyi_args is None:
             pyi_args = []
@@ -567,7 +567,7 @@ def compiled_dylib(tmpdir, request):
 
 
 @pytest.fixture
-def pyi_windowed_builder(pyi_builder: AppBuilder):
+def pyi_windowed_builder(pyi_builder):
     """A pyi_builder equivalent for testing --windowed applications."""
 
     # psutil.Popen() somehow bypasses an application's windowed/console mode so that any application built in

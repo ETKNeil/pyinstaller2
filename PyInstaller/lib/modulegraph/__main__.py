@@ -48,9 +48,9 @@ def create_graph(scripts, domods, debuglevel, excludes, path_extras):
 
     path = path_extras + path
     if debuglevel > 1:
-        print("path:", file=sys.stderr)
+        print("path:", sys.stderr)
         for item in path:
-            print("   ", repr(item), file=sys.stderr)
+            print("   ", repr(item), sys.stderr)
 
     # Create the module finder and turn its crank
     mf = ModuleGraph(path, excludes=excludes, debug=debuglevel)

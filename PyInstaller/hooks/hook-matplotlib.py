@@ -12,7 +12,7 @@
 from PyInstaller import isolated
 
 
-@isolated.decorate
+# @isolated.decorate
 def mpl_data_dir():
     import matplotlib
     return matplotlib.get_data_path()

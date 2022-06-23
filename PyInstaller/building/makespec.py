@@ -62,7 +62,7 @@ def add_data_or_binary(string):
         src, dest = string.split(add_command_sep)
     except ValueError as e:
         # Split into SRC and DEST failed, wrong syntax
-        raise argparse.ArgumentError("Wrong syntax, should be SRC{}DEST".format(add_command_sep)) from e
+        raise argparse.ArgumentError("Wrong syntax, should be SRC{}DEST".format(add_command_sep)) #from e
     if not src or not dest:
         # Syntax was correct, but one or both of SRC and DEST was not given
         raise argparse.ArgumentError("You have to specify both SRC and DEST")
@@ -807,7 +807,7 @@ def main(
 
     # Write down .spec file to filesystem.
     specfnm = os.path.join(specpath, name + '.spec')
-    with open(specfnm, 'w', encoding='utf-8') as specfile:
+    with open(specfnm, 'w', ) as specfile: # FIXME(EK) encoding
         if onefile:
             specfile.write(onefiletmplt % d)
             # For Mac OS create .app bundle.

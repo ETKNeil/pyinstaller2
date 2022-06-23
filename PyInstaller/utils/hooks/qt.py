@@ -97,7 +97,7 @@ class QtLibraryInfo:
             self.version = None
 
             # Get library path information from Qt. See QLibraryInfo_.
-            @isolated.decorate
+            # @isolated.decorate
             def _read_qt_library_info(package):
                 import importlib
 
@@ -807,8 +807,8 @@ def get_qt_webengine_binaries_and_data_files(qt_library_info):
             # Create temporary file in workpath
             qt_conf_file = os.path.join(CONF['workpath'], "qt.conf")
             with open(qt_conf_file, 'w') as fp:
-                print("[Paths]", file=fp)
-                print("Prefix = {}".format(rel_prefix), file=fp)
+                print("[Paths]", fp)
+                print("Prefix = {}".format(rel_prefix), fp)
         datas.append((qt_conf_file, dest))
 
     # Add Linux-specific libraries.

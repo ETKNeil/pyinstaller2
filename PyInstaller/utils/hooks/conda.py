@@ -37,8 +37,7 @@ it with. I.e., use ``distribution("pillow")`` instead of ``distribution("PIL")``
 import fnmatch
 import json
 import sys
-from pathlib import Path
-from typing import Iterable, List
+from pathlib2 import Path
 
 from PyInstaller import compat
 from PyInstaller.log import logger
@@ -187,7 +186,7 @@ class PackagePath(_PackagePath):
         return Path(sys.prefix) / self
 
 
-def walk_dependency_tree(initial: str, excludes: Iterable[str] = None) -> dict:
+def walk_dependency_tree(initial, excludes = None):
     """
     Collect a :class:`Distribution` and all direct and indirect dependencies of that distribution.
 
@@ -244,7 +243,7 @@ def _iter_distributions(name, dependencies, excludes):
         return [Distribution.from_name(name)]
 
 
-def requires(name: str, strip_versions=False) -> List[str]:
+def requires(name, strip_versions=False) :
     """
     List requirements of a distribution.
 
@@ -261,7 +260,7 @@ def requires(name: str, strip_versions=False) -> List[str]:
     return distribution(name).raw["depends"]
 
 
-def files(name: str, dependencies=False, excludes=None) -> List[PackagePath]:
+def files(name, dependencies=False, excludes=None) :
     """
     List all files belonging to a distribution.
 
@@ -288,7 +287,7 @@ else:
     lib_dir = PackagePath("lib")
 
 
-def collect_dynamic_libs(name: str, dest: str = ".", dependencies: bool = True, excludes: Iterable[str] = None) -> List:
+def collect_dynamic_libs(name, dest = ".", dependencies = True, excludes = None) :
     """
     Collect DLLs for distribution **name**.
 
@@ -318,7 +317,7 @@ def collect_dynamic_libs(name: str, dest: str = ".", dependencies: bool = True, 
 # --- Map packages to distributions and vice-versa ---
 
 
-def _get_package_name(file: PackagePath):
+def _get_package_name(file):
     """
     Determine the package name of a Python file in :data:`sys.path`.
 

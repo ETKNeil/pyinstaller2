@@ -10,10 +10,10 @@
 # -----------------------------------------------------------------------------
 
 import os
-from pathlib import Path
 from marshal import loads, dumps
 from base64 import b64encode, b64decode
 import functools
+from pathlib2 import Path
 
 from PyInstaller.compat import __wrap_python
 
@@ -30,6 +30,10 @@ if os.name == "nt":
 
 else:
     close = os.close
+    def open(osf_handle, mode):
+        print(osf_handle)
+        import __builtin__
+        __builtin__.open(osf_handle,mode)
 
 CHILD_PY = Path(__file__).with_name("_child.py")
 
@@ -47,8 +51,8 @@ def pipe():
     read, write = os.pipe()
     # The default behaviour of pipes is that they are process specific. i.e. they can only be used for this process to
     # talk to itself. Setting these means that child processes may also use these pipes.
-    os.set_inheritable(read, True)
-    os.set_inheritable(write, True)
+    # os.set_inheritable(read, True)
+    # os.set_inheritable(write, True)
 
     # On Windows, file descriptors are not shareable. They need to be converted to system file handles here then
     # converted back with open_osfhandle() by the child.
@@ -58,7 +62,7 @@ def pipe():
     return read, write
 
 
-def child(read_from_parent: int, write_to_parent: int):
+def child(read_from_parent, write_to_parent):
     """
     Spawn a Python subprocess sending it the two file descriptors it needs to talk back to this parent process.
     """
@@ -110,18 +114,23 @@ class Python:
         self._child = None
 
     def __enter__(self):
+
+        print("qqe")
         # We need two pipes. One for the child to send data to the parent.
         self._read_from_child, self._write_to_parent = pipe()
         # And one for the parent to send data to the child.
         self._read_from_parent, self._write_to_child = pipe()
 
+        print("qqe")
         # Spawn a Python subprocess sending it the two file descriptors it needs to talk back to this parent process.
         self._child = child(self._read_from_parent, self._write_to_parent)
 
+        print("qq21e")
         # Open file handles to talk to the child.
-        self._write_handle = open(self._write_to_child, "wb")
-        self._read_handle = open(self._read_from_child, "rb")
+        self._write_handle = open(str(self._write_to_child), "wb")
+        self._read_handle = open(str(self._read_from_child), "rb")
 
+        print("qqe")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -147,7 +156,6 @@ class Python:
         """
         if self._child is None:
             raise RuntimeError("An isolated.Python object must be used in a 'with' clause.")
-
         # Send 5 lines to the child process: The function's code attribute, its default args and kwargs, and its actual
         # args and kwargs, all serialised.
         self._write_handle.writelines([
@@ -173,7 +181,7 @@ class Python:
         # Otherwise an error happened and ``output`` is a string-ified stacktrace. Raise an error appending the
         # stacktrace. Having the output in this order gives a nice fluent transition from parent to child in the stack
         # trace.
-        raise RuntimeError(f"Child process call to {function.__name__}() failed with:\n" + output)
+        raise RuntimeError("Child process call to {function.__name__}() failed with:\n" + output)
 
 
 def call(function, *args, **kwargs):

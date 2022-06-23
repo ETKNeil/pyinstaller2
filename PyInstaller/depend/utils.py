@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Copyright (c) 2005-2022, PyInstaller Development Team.
 #
 # Distributed under the terms of the GNU General Public License (version 2
@@ -8,19 +8,20 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 #
 # SPDX-License-Identifier: (GPL-2.0-or-later WITH Bootloader-exception)
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 """
 Utility functions related to analyzing/bundling dependencies.
 """
-
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
 import ctypes.util
 import io
 import os
 import re
 import struct
 import zipfile
-from types import CodeType
-from importlib.util import source_hash as importlib_source_hash
 
 import marshal
 
@@ -46,8 +47,8 @@ def create_py3_base_library(libzip_filename, graph):
 
     # Construct regular expression for matching modules that should be bundled into base_library.zip. Excluded are plain
     # 'modules' or 'submodules.ANY_NAME'. The match has to be exact - start and end of string not substring.
-    regex_modules = '|'.join([rf'(^{x}$)' for x in compat.PY3_BASE_MODULES])
-    regex_submod = '|'.join([rf'(^{x}\..*$)' for x in compat.PY3_BASE_MODULES])
+    regex_modules = '|'.join([r'(^{}$)'.format(x) for x in compat.PY3_BASE_MODULES])
+    regex_submod = '|'.join([r'(^{}\..*$)'.format(x) for x in compat.PY3_BASE_MODULES])
     regex_str = regex_modules + '|' + regex_submod
     module_filter = re.compile(regex_str)
 
@@ -83,11 +84,25 @@ def create_py3_base_library(libzip_filename, graph):
                             fc.write(struct.pack('<I', 0b01))
                             with open(mod.filename, 'rb') as fs:
                                 source_bytes = fs.read()
-                            source_hash = importlib_source_hash(source_bytes)
-                            fc.write(source_hash)
+                            # FIXME importlib_source_hash(source_bytes)
+                            import hashlib
+                            source_hash = hashlib.sha256(source_bytes).digest()
+
+                            # FIXME in python 2 no 64 bit hash are appended
+                            # fc.write(source_hash[:8])
 
                             code = strip_paths_in_code(mod.code)  # Strip paths
-                            marshal.dump(code, fc)
+
+                            import tempfile
+                            tempf = tempfile.TemporaryFile(mode="rw+b")
+                            marshal.dump(code, tempf)
+                            tempf.seek(0)
+                            l=tempf.read()
+                            # print(":".join("{:02x}".format(ord(c)) for c in l))
+                            fc.write(l)
+
+                            tempf.close()
+
                             # Use a ZipInfo to set timestamp for deterministic build.
                             info = zipfile.ZipInfo(new_name)
                             zf.writestr(info, fc.getvalue())
@@ -125,7 +140,7 @@ def scan_code_for_ctypes(co):
     return binaries
 
 
-def __recursively_scan_code_objects_for_ctypes(code: CodeType):
+def __recursively_scan_code_objects_for_ctypes(code):
     """
     Detects ctypes dependencies, using reasonable heuristics that should cover most common ctypes usages; returns a
     list containing names of binaries detected as dependencies.
@@ -133,19 +148,23 @@ def __recursively_scan_code_objects_for_ctypes(code: CodeType):
     from PyInstaller.depend.bytecode import any_alias, search_recursively
 
     binaries = []
-    ctypes_dll_names = {
-        *any_alias("ctypes.CDLL"),
-        *any_alias("ctypes.cdll.LoadLibrary"),
-        *any_alias("ctypes.WinDLL"),
-        *any_alias("ctypes.windll.LoadLibrary"),
-        *any_alias("ctypes.OleDLL"),
-        *any_alias("ctypes.oledll.LoadLibrary"),
-        *any_alias("ctypes.PyDLL"),
-        *any_alias("ctypes.pydll.LoadLibrary"),
-    }
-    find_library_names = {
-        *any_alias("ctypes.util.find_library"),
-    }
+    ctypes_dll_names = set()
+    for el in any_alias("ctypes.CDLL"):
+        ctypes_dll_names.add(el)
+    for el in any_alias("ctypes.WinDLL"):
+        ctypes_dll_names.add(el)
+    for el in any_alias("ctypes.windll.LoadLibrary"):
+        ctypes_dll_names.add(el)
+    for el in any_alias("ctypes.OleDLL"):
+        ctypes_dll_names.add(el)
+    for el in any_alias("ctypes.oledll.LoadLibrary"):
+        ctypes_dll_names.add(el)
+    for el in any_alias("ctypes.PyDLL"):
+        ctypes_dll_names.add(el)
+    for el in any_alias("ctypes.pydll.LoadLibrary"):
+        ctypes_dll_names.add(el)
+
+    find_library_names = set(any_alias("ctypes.util.find_library"))
 
     for calls in bytecode.recursive_function_calls(code).values():
         for (name, args) in calls:
@@ -175,7 +194,7 @@ def __recursively_scan_code_objects_for_ctypes(code: CodeType):
 
 
 _ctypes_getattr_regex = bytecode.bytecode_regex(
-    rb"""
+    r"""
     # Matches 'foo.bar' or 'foo.bar.whizz'.
 
     # Load the 'foo'.
@@ -189,7 +208,7 @@ _ctypes_getattr_regex = bytecode.bytecode_regex(
 )
 
 
-def _scan_code_for_ctypes_getattr(code: CodeType):
+def _scan_code_for_ctypes_getattr(code):
     """
     Detect uses of ``ctypes.cdll.library_name``, which implies that ``library_name.dll`` should be collected.
     """
@@ -344,8 +363,8 @@ def load_ldconfig_cache():
     else:
         # Skip first line of the library list because it is just an informative line and might contain localized
         # characters. Example of first line with locale set to cs_CZ.UTF-8:
-        #$ /sbin/ldconfig -p
-        #V keši „/etc/ld.so.cache“ nalezeno knihoven: 2799
+        # $ /sbin/ldconfig -p
+        # V keši „/etc/ld.so.cache“ nalezeno knihoven: 2799
         #      libzvbi.so.0 (libc6,x86-64) => /lib64/libzvbi.so.0
         #      libzvbi-chains.so.0 (libc6,x86-64) => /lib64/libzvbi-chains.so.0
         ldconfig_arg = '-p'

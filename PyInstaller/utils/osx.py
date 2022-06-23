@@ -106,7 +106,7 @@ def _hex_triplet(version):
     return major, minor, revision
 
 
-def macosx_version_min(filename: str) -> tuple:
+def macosx_version_min(filename):
     """
     Get the -macosx-version-min used to compile a macOS binary.
 
@@ -284,7 +284,7 @@ def get_binary_architectures(filename):
     try:
         executable = MachO(filename)
     except ValueError as e:
-        raise InvalidBinaryError("Invalid Mach-O binary!") from e
+        raise InvalidBinaryError("Invalid Mach-O binary!") #from e
     return bool(executable.fat), [_get_arch_string(hdr.header) for hdr in executable.headers]
 
 
@@ -295,7 +295,7 @@ def convert_binary_to_thin_arch(filename, thin_arch):
     cmd_args = ['lipo', '-thin', thin_arch, filename, '-output', filename]
     p = subprocess.run(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     if p.returncode:
-        raise SystemError(f"lipo command ({cmd_args}) failed with error code {p.returncode}!\noutput: {p.stdout}")
+        raise SystemError("lipo command ({cmd_args}) failed with error code {p.returncode}!\noutput: {p.stdout}")
 
 
 def binary_to_target_arch(filename, target_arch, display_name=None):
@@ -309,19 +309,19 @@ def binary_to_target_arch(filename, target_arch, display_name=None):
     is_fat, archs = get_binary_architectures(filename)
     if target_arch == 'universal2':
         if not is_fat:
-            raise IncompatibleBinaryArchError(f"{display_name} is not a fat binary!")
+            raise IncompatibleBinaryArchError("{display_name} is not a fat binary!")
         # Assume fat binary is universal2; nothing to do
     else:
         if is_fat:
             if target_arch not in archs:
-                raise IncompatibleBinaryArchError(f"{display_name} does not contain slice for {target_arch}!")
+                raise IncompatibleBinaryArchError("{display_name} does not contain slice for {target_arch}!")
             # Convert to thin arch
             logger.debug("Converting fat binary %s (%s) to thin binary (%s)", filename, display_name, target_arch)
             convert_binary_to_thin_arch(filename, target_arch)
         else:
             if target_arch not in archs:
                 raise IncompatibleBinaryArchError(
-                    f"{display_name} is incompatible with target arch {target_arch} (has arch: {archs[0]})!"
+                    "{display_name} is incompatible with target arch {target_arch} (has arch: {archs[0]})!"
                 )
             # Binary has correct arch; nothing to do
 
@@ -334,7 +334,7 @@ def remove_signature_from_binary(filename):
     cmd_args = ['codesign', '--remove', '--all-architectures', filename]
     p = subprocess.run(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     if p.returncode:
-        raise SystemError(f"codesign command ({cmd_args}) failed with error code {p.returncode}!\noutput: {p.stdout}")
+        raise SystemError("codesign command ({cmd_args}) failed with error code {p.returncode}!\noutput: {p.stdout}")
 
 
 def sign_binary(filename, identity=None, entitlements_file=None, deep=False):
@@ -356,4 +356,4 @@ def sign_binary(filename, identity=None, entitlements_file=None, deep=False):
     cmd_args = ['codesign', '-s', identity, '--force', '--all-architectures', '--timestamp', *extra_args, filename]
     p = subprocess.run(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     if p.returncode:
-        raise SystemError(f"codesign command ({cmd_args}) failed with error code {p.returncode}!\noutput: {p.stdout}")
+        raise SystemError("codesign command ({cmd_args}) failed with error code {p.returncode}!\noutput: {p.stdout}")

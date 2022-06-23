@@ -34,7 +34,8 @@ _orig_pkgutil_iter_modules = pkgutil.iter_modules
 def _pyi_pkgutil_iter_modules(path=None, prefix=''):
     # Use original implementation to discover on-filesystem modules (binary extensions in regular builds, or both binary
     # extensions and compiled pyc modules in noarchive debug builds).
-    yield from _orig_pkgutil_iter_modules(path, prefix)
+    for b in _orig_pkgutil_iter_modules(path, prefix):
+        yield b
 
     # Find the instance of PyInstaller's FrozenImporter.
     for importer in pkgutil.iter_importers():

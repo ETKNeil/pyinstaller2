@@ -92,9 +92,9 @@ def is_musl(ctx):
     """Return true if the C compiler targets Linux using musl libc. Always false on non-Linux."""
     if ctx.env.DEST_OS != 'linux':
         return False
-    from subprocess import run, PIPE
-    spec = run(ctx.env.CC + ["-v"], stderr=PIPE).stderr
-    return re.search(rb'--target=\S+-musl', spec) or re.search(rb'Target: .*musl', spec)
+    from subprocess import check_output, PIPE, STDOUT
+    spec = check_output(ctx.env.CC + ["-v"], stderr=STDOUT)
+    return re.search(r'--target=\S+-musl', spec) or re.search(r'Target: .*musl', spec)
 
 
 def find_program_next_to_cc(ctx, name, var):

@@ -14,7 +14,7 @@ from PyInstaller import isolated
 hiddenimports = ['PySide2.QtCore', 'PySide2.QtWidgets', 'PySide2.QtGui', 'PySide2.QtSvg']
 
 
-@isolated.decorate
+# @isolated.decorate
 def conditional_imports():
     from PySide2 import Qwt5
 

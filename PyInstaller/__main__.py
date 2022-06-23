@@ -21,7 +21,8 @@ from PyInstaller import __version__
 from PyInstaller import log as logging
 # Note: do not import anything else until compat.check_requirements function is run!
 from PyInstaller import compat
-
+import sys
+sys.setrecursionlimit(5000)
 logger = logging.getLogger(__name__)
 
 # Taken from https://stackoverflow.com/a/22157136 to format args more flexibly: any help text which beings with ``R|``
@@ -37,7 +38,7 @@ class _SmartFormatter(argparse.HelpFormatter):
             return text[2:].splitlines()
         else:
             # Invoke the usual formatter.
-            return super()._split_lines(text, width)
+            return super(_SmartFormatter,self)._split_lines(text, width)
 
 
 def run_makespec(filenames, **opts):
@@ -72,9 +73,9 @@ def __add_options(parser):
 class _PyiArgumentParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         self._pyi_action_groups = defaultdict(list)
-        super().__init__(*args, **kwargs)
+        super(_PyiArgumentParser,self).__init__(*args, **kwargs)
 
-    def _add_options(self, __add_options: callable, name: str = ""):
+    def _add_options(self, __add_options, name = ""):
         """
         Mutate self with the given callable, storing any new actions added in a named group
         """
@@ -97,7 +98,7 @@ class _PyiArgumentParser(argparse.ArgumentParser):
             name = action.option_strings[0]
         return name
 
-    def _forbid_options(self, args: argparse.Namespace, group: str, errmsg: str = ""):
+    def _forbid_options(self, args, group, errmsg = ""):
         """Forbid options from a named action group"""
         options = defaultdict(str)
         for action in self._pyi_action_groups[group]:
@@ -115,10 +116,10 @@ class _PyiArgumentParser(argparse.ArgumentParser):
             bad = sep.join(options.values())
             if errmsg:
                 errmsg = "\n" + errmsg
-            raise SystemExit(f"option(s) not allowed:{sep}{bad}{errmsg}")
+            raise SystemExit("option(s) not allowed:{sep}{bad}{errmsg}")
 
 
-def generate_parser() -> _PyiArgumentParser:
+def generate_parser():
     """
     Build an argparse parser for PyInstaller's main CLI.
     """
@@ -145,6 +146,10 @@ def generate_parser() -> _PyiArgumentParser:
 
     return parser
 
+try:
+    RecursionError
+except NameError:
+    RecursionError = IOError
 
 def run(pyi_args=None, pyi_config=None):
     """

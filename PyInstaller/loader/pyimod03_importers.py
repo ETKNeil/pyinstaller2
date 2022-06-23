@@ -15,7 +15,10 @@ PEP-302 and PEP-451 importers for frozen applications.
 # **NOTE** This module is used during bootstrap.
 # Import *ONLY* builtin modules.
 # List of built-in modules: sys.builtin_module_names
-
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
 import sys
 
 import _frozen_importlib
@@ -133,7 +136,7 @@ class FrozenImporter:
             try:
                 return self._pyz_archive.is_pep420_namespace_package(fullname)
             except Exception as e:
-                raise ImportError('Loader FrozenImporter cannot handle module ' + fullname) from e
+                raise ImportError('Loader FrozenImporter cannot handle module ' + fullname) #from e
         else:
             raise ImportError('Loader FrozenImporter cannot handle module ' + fullname)
 
@@ -245,7 +248,9 @@ class FrozenImporter:
 
                 #-- Set __spec__
                 # Python 3.4 introduced module attribute __spec__ to consolidate all module attributes.
-                module.__spec__ = _frozen_importlib.ModuleSpec(entry_name, self, is_package=is_pkg)
+                if sys.version_info > (3, 4):
+                    import _frozen_importlib
+                    module.__spec__ = _frozen_importlib.ModuleSpec(entry_name, self, is_package=is_pkg)
 
                 #-- Add module object to sys.modules dictionary.
                 # Module object must be in sys.modules before the loader executes the module code. This is crucial
@@ -277,7 +282,7 @@ class FrozenImporter:
             try:
                 return self._pyz_archive.is_package(fullname)
             except Exception as e:
-                raise ImportError('Loader FrozenImporter cannot handle module ' + fullname) from e
+                raise ImportError('Loader FrozenImporter cannot handle module ' + fullname) #from e
         else:
             raise ImportError('Loader FrozenImporter cannot handle module ' + fullname)
 
@@ -297,7 +302,7 @@ class FrozenImporter:
             # exception, which is turned into ImportError.
             return self._pyz_archive.extract(fullname)[1]
         except Exception as e:
-            raise ImportError('Loader FrozenImporter cannot handle module ' + fullname) from e
+            raise ImportError('Loader FrozenImporter cannot handle module ' + fullname) #from e
 
     def get_source(self, fullname):
         """

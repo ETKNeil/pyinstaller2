@@ -22,11 +22,12 @@ from PyInstaller.depend.utils import get_path_to_egg
 logger = logging.getLogger(__name__)
 
 # create a list of excludes suitable for Tree.
-PY_IGNORE_EXTENSIONS = {
-    *('*' + x for x in ALL_SUFFIXES),
-    # Exclude EGG-INFO, too, as long as we do not have a way to hold several in one archive.
-    'EGG-INFO',
-}
+PY_IGNORE_EXTENSIONS = []
+for x in ALL_SUFFIXES:
+    PY_IGNORE_EXTENSIONS.append('*'+x)
+
+# Exclude EGG-INFO, too, as long as we do not have a way to hold several in one archive.
+PY_IGNORE_EXTENSIONS.append('EGG-INFO')
 
 
 class DependencyProcessor:

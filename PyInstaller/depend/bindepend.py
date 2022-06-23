@@ -176,7 +176,7 @@ def matchDLLArch(filename):
         match_arch = pe.FILE_HEADER.Machine == _exe_machine_type
         pe.close()
     except pefile.PEFormatError as exc:
-        raise SystemExit('Cannot get architecture from file: %s\n  Reason: %s' % (pefilename, exc))
+        raise SystemExit('Cannot get architecture #from file: %s\n  Reason: %s' % (pefilename, exc))
     return match_arch
 
 
@@ -523,9 +523,9 @@ def _getImports_ldd(pth):
     else:
         lddPattern = re.compile(r"\s*(.*?)\s+=>\s+(.*?)\s+\(.*\)")
 
-    p = subprocess.run(['ldd', pth], stderr=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+    p = subprocess.Popen(['ldd', pth], stderr=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
 
-    for line in p.stderr.splitlines():
+    for line in p.stderr.read().splitlines():
         if not line:
             continue
         # Python extensions (including stdlib ones) are not linked against python.so but rely on Python's symbols having
@@ -534,9 +534,9 @@ def _getImports_ldd(pth):
         elif line.startswith("Error relocating ") and line.endswith(" symbol not found"):
             continue
         # Propagate any other warnings it might have.
-        print(line, file=sys.stderr)
+        print(line, sys.stderr)
 
-    for line in p.stdout.splitlines():
+    for line in p.stdout.read().splitlines():
         m = lddPattern.search(line)
         if m:
             if compat.is_aix:

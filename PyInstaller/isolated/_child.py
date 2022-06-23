@@ -86,10 +86,13 @@ def run_next_command(read_fh, write_fh):
 
 
 if __name__ == '__main__':
-    read_from_parent, write_to_parent = map(int, sys.argv[1:])
+    try:
+        read_from_parent, write_to_parent = map(int, sys.argv[1:])
 
-    with _open(read_from_parent, "rb") as read_fh:
-        with _open(write_to_parent, "wb") as write_fh:
-            # Keep receiving and running instructions until the parent sends the signal to stop.
-            while run_next_command(read_fh, write_fh):
-                pass
+        with _open(str(read_from_parent), "rb") as read_fh:
+            with _open(str(write_to_parent), "wb") as write_fh:
+                # Keep receiving and running instructions until the parent sends the signal to stop.
+                while run_next_command(read_fh, write_fh):
+                    pass
+    except Exception as e:
+        print("ewq",e)

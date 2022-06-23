@@ -27,7 +27,7 @@ def pre_safe_import_module(api):
     tkinter_tix` to `import tkinter.tix`). For each such mapping, this hook adds a corresponding module alias to the
     graph allowing PyInstaller to translate the former to the latter.
     """
-    @isolated.call
+    # @isolated.call
     def real_to_six_module_name():
         """
         Generate a dictionary from conventional module names to "six.moves" attribute names (e.g., from `tkinter.tix` to

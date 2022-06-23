@@ -11,7 +11,10 @@
 """
 Code related to processing of import hooks.
 """
-
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
 import glob
 import os.path
 import sys
@@ -77,7 +80,7 @@ class ModuleHookCache(dict):
             Python scripts with filenames matching `hook-{module_name}.py`, where `{module_name}` is the module
             hooked by that script) to be cached.
         """
-        super().__init__()
+        super(ModuleHookCache,self).__init__()
 
         # To avoid circular references and hence increased memory consumption, a weak rather than strong reference is
         # stored to the passed graph. Since this graph is guaranteed to live longer than this cache,
@@ -182,7 +185,7 @@ _MAGIC_MODULE_HOOK_ATTRS = {
 }
 
 
-class ModuleHook:
+class ModuleHook(object):
     """
     Cached object encapsulating a lazy loadable hook script.
 
@@ -293,7 +296,7 @@ class ModuleHook:
         # this attribute. To avoid recursion, the superclass method rather than getattr() is called.
         if attr_name in _MAGIC_MODULE_HOOK_ATTRS:
             self._load_hook_module()
-            return super().__getattr__(attr_name)
+            return super(ModuleHook,self).__getattr__(attr_name)
         # Else, this is an undefined attribute. Raise an exception.
         else:
             raise AttributeError(attr_name)
@@ -318,7 +321,7 @@ class ModuleHook:
 
         # Set this attribute to the passed value. To avoid recursion, the superclass method rather than setattr() is
         # called.
-        return super().__setattr__(attr_name, attr_value)
+        return super(ModuleHook,self).__setattr__(attr_name, attr_value)
 
     #-- Loading --
 
@@ -346,11 +349,12 @@ class ModuleHook:
                 # Inform the user
                 logger.debug(
                     'Skipping module hook %r from %r because a hook for %s has already been loaded.',
-                    *os.path.split(self.hook_filename)[::-1], self.module_name
+                    self.module_name,
+                    *os.path.split(self.hook_filename)[::-1]
                 )
                 # Set the default attributes to empty instances of the type.
                 for attr_name, (attr_type, _) in _MAGIC_MODULE_HOOK_ATTRS.items():
-                    super().__setattr__(attr_name, attr_type())
+                    super(ModuleHook,self).__setattr__(attr_name, attr_type())
             return
 
         # Load and execute the hook script. Even if mechanisms from the import machinery are used, this does not import

@@ -14,7 +14,7 @@ from PyInstaller.utils.hooks import logger, get_hook_config
 from PyInstaller import isolated
 
 
-@isolated.decorate
+# @isolated.decorate
 def _get_configured_default_backend():
     """
     Return the configured default matplotlib backend name, if available as matplotlib.rcParams['backend'] (or overridden
@@ -30,7 +30,7 @@ def _get_configured_default_backend():
     return None
 
 
-@isolated.decorate
+# @isolated.decorate
 def _list_available_mpl_backends():
     """
     Returns the names of all available matplotlib backends.
@@ -39,7 +39,7 @@ def _list_available_mpl_backends():
     return matplotlib.rcsetup.all_backends
 
 
-@isolated.decorate
+# @isolated.decorate
 def _check_mpl_backend_importable(module_name):
     """
     Attempts to import the given module name (matplotlib backend module).
@@ -85,7 +85,7 @@ def _backend_module_name(name):
     """
     if name.startswith("module://"):
         return name[9:]
-    return f"matplotlib.backends.backend_{name.lower()}"
+    return "matplotlib.backends.backend_{}".format(name.lower())
 
 
 def _autodetect_used_backends(hook_api):

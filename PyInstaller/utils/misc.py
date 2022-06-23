@@ -209,7 +209,7 @@ def save_py_data_struct(filename, data):
     dirname = os.path.dirname(filename)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
-    with open(filename, 'w', encoding='utf-8') as f:
+    with open(filename, 'w', ) as f: # FIXME(EK) encoding
         pprint.pprint(data, f)
 
 
@@ -219,7 +219,7 @@ def load_py_data_struct(filename):
     :param filename:
     :return:
     """
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(filename, 'r', ) as f: # FIXME(EK) encoding
         # Binding redirects are stored as a named tuple, so bring the namedtuple class into scope for parsing the TOC.
         from PyInstaller.depend.bindepend import BindingRedirect  # noqa: F401
 
@@ -298,10 +298,10 @@ BOM_MARKERS_TO_DECODERS = {
     codecs.BOM_UTF16: codecs.utf_16_decode,
     codecs.BOM_UTF8: codecs.utf_8_decode,
 }
-BOM_RE = re.compile(rb"\A(%s)?(.*)" % b"|".join(map(re.escape, BOM_MARKERS_TO_DECODERS)), re.DOTALL)
+BOM_RE = re.compile(r"\A(%s)?(.*)" % b"|".join(map(re.escape, BOM_MARKERS_TO_DECODERS)), re.DOTALL)
 
 
-def decode(raw: bytes):
+def decode(raw):
     """
     Decode bytes to string, respecting and removing any byte-order marks if present, or respecting but not removing any
     PEP263 encoding comments (# encoding: cp1252).

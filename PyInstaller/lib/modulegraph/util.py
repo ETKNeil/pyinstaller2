@@ -136,7 +136,8 @@ def iterate_instructions(code_object):
     Yields `dis.Instruction`. After each code-block (`co_code`), `None` is
     yielded to mark the end of the block and to interrupt the steam.
     """
-    yield from get_instructions(code_object)
+    for b in  get_instructions(code_object):
+        yield b
 
     yield None
 
@@ -144,4 +145,5 @@ def iterate_instructions(code_object):
     # parse this constant in the same manner.
     for constant in code_object.co_consts:
         if inspect.iscode(constant):
-            yield from iterate_instructions(constant)
+            for b in iterate_instructions(constant):
+                yield b

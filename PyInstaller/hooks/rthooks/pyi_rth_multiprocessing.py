@@ -69,7 +69,7 @@ class FrozenSupportMixIn:
             # We have to set original _MEIPASS2 value from sys._MEIPASS to get --onefile mode working.
             os.putenv('_MEIPASS2', sys._MEIPASS)  # @UndefinedVariable
         try:
-            super().__init__(*args, **kw)
+            super(FrozenSupportMixIn,self).__init__(*args, **kw)
         finally:
             if hasattr(sys, 'frozen'):
                 # On some platforms (e.g. AIX) 'os.unsetenv()' is not available. In those cases we cannot delete the

@@ -54,7 +54,7 @@ class Structure:
         try:
             return self.__dict__[name]
         except KeyError as e:
-            raise AttributeError(name) from e
+            raise AttributeError(name) #from e
 
     def __setattr__(self, name, value):
         if name in self._names_:
@@ -196,7 +196,7 @@ def CopyIcons(dstpath, srcpath):
         for s in srcpath:
             e = os.path.splitext(s[0])[1]
             if e.lower() != '.ico':
-                raise ValueError('Multiple icons supported only from .ico files')
+                raise ValueError('Multiple icons supported only #from .ico files')
             srcs.append(s[0])
         return CopyIcons_FromIco(dstpath, srcs)
 

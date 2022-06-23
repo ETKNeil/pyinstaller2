@@ -30,7 +30,7 @@ from PyInstaller.compat import BYTECODE_MAGIC, is_win
 from PyInstaller.loader.pyimod02_archive import PYZ_TYPE_DATA, PYZ_TYPE_MODULE, PYZ_TYPE_NSPKG, PYZ_TYPE_PKG
 
 
-class ArchiveWriter:
+class ArchiveWriter(object):
     """
     A base class for a repository of python code objects. The extract method is used by imputil.ArchiveImporter to
     get code objects by name (fully qualified name), so an end-user "import a.b" becomes extract('a.__init__') and
@@ -166,7 +166,7 @@ class ZlibArchiveWriter(ArchiveWriter):
         self.code_dict = code_dict or {}
         self.cipher = cipher or None
 
-        super().__init__(archive_path, logical_toc)
+        super(ZlibArchiveWriter,self).__init__(archive_path, logical_toc)
 
     def add(self, entry):
         name, path, typ = entry
@@ -310,13 +310,13 @@ class CArchiveWriter(ArchiveWriter):
         self._pylib_name = pylib_name
 
         # A CArchive created from scratch starts at 0, no leading bootloader.
-        super().__init__(archive_path, logical_toc)
+        super(CArchiveWriter,self).__init__(archive_path, logical_toc)
 
     def _start_add_entries(self, path):
         """
         Open an empty archive for addition of entries.
         """
-        super()._start_add_entries(path)
+        super(CArchiveWriter,self)._start_add_entries(path)
         # Override parents' toc {} with a class.
         self.toc = CTOC()
 
@@ -356,8 +356,9 @@ class CArchiveWriter(ArchiveWriter):
                     # Read whole header and load code. According to PEP-552, the PYC header consists of four 32-bit
                     # words (magic, flags, and, depending on the flags, either timestamp and source file size, or a
                     # 64-bit hash).
-                    header = data[:16]
-                    code = marshal.loads(data[16:])
+                    # FIXME WARNING PEP 552 was not valid in python 2 !!!!! changing to 8 instead of 16
+                    header = data[:8]
+                    code = marshal.loads(data[8:])
                     # Strip paths from code, marshal back into module form. The header fields (timestamp, size, hash,
                     # etc.) are all referring to the source file, so our modification of the code object does not affect
                     # them, and we can re-use the original header.
@@ -378,14 +379,14 @@ class CArchiveWriter(ArchiveWriter):
             print("Cannot find ('%s', '%s', %s, '%s')" % (dest, source, compress, type))
             raise
 
-    def _write_blob(self, blob: bytes, dest, type, compress=False):
+    def _write_blob(self, blob, dest, type, compress=False):
         """
         Write the binary contents (**blob**) of a small file to both the archive and its table of contents.
         """
         start = self.lib.tell()
         length = len(blob)
         if compress:
-            blob = zlib.compress(blob, level=self.LEVEL)
+            blob = zlib.compress(blob)
         self.lib.write(blob)
         self.toc.add(start, len(blob), length, int(compress), type, dest)
 
@@ -494,7 +495,7 @@ class SplashWriter(ArchiveWriter):
         self._requirements_len = 0
         self._requirements_offset = 0
 
-        super().__init__(archive_path, name_list)
+        super(SplashWriter,self).__init__(archive_path, name_list)
 
     def add(self, name):
         """

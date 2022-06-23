@@ -49,7 +49,7 @@ def hook(hook_api):
     hook_api.add_datas(hook_datas)
 
 
-@isolated.call
+# @isolated.call
 def plugin_path():
     import os
     import gi

@@ -16,7 +16,7 @@ import fnmatch
 import glob
 import hashlib
 import os
-import pathlib
+import pathlib2 as pathlib
 import platform
 import shutil
 import struct
@@ -446,8 +446,11 @@ def _make_clean_directory(path):
                 os.remove(path)
             except OSError:
                 _rmtree(path)
+        try:
+            os.makedirs(path)
+        except IOError:
+            pass
 
-        os.makedirs(path, exist_ok=True)
 
 
 def _rmtree(path):

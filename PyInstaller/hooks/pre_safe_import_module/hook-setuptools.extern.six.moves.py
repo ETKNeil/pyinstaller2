@@ -18,7 +18,7 @@ from PyInstaller import isolated
 
 
 def pre_safe_import_module(api):
-    @isolated.call
+    # @isolated.call
     def real_to_six_module_name():
         try:
             import setuptools._vendor.six as six

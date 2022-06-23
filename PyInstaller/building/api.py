@@ -399,7 +399,7 @@ class EXE(Target):
                 self.target_arch = platform.machine()
             else:
                 assert self.target_arch in {'x86_64', 'arm64', 'universal2'}, \
-                    f"Unsupported target arch: {self.target_arch}"
+                    "Unsupported target arch: {self.target_arch}"
             logger.info("EXE target arch: %s", self.target_arch)
         else:
             self.target_arch = None  # explicitly disable
@@ -726,10 +726,10 @@ class EXE(Target):
         if is_linux:
             # Linux: append data into custom ELF section using objcopy.
             logger.info("Appending %s to custom ELF section in EXE", append_type)
-            cmd = ['objcopy', '--add-section', f'pydata={append_file}', build_name]
-            p = subprocess.run(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, universal_newlines=True)
+            cmd = ['objcopy', '--add-section', 'pydata={}'.format(append_file), build_name]
+            p = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, universal_newlines=True)
             if p.returncode:
-                raise SystemError(f"objcopy Failure: {p.returncode} {p.stdout}")
+                raise SystemError("objcopy Failure: {p.returncode} {p.stdout}")
 
         elif is_darwin:
             # macOS: remove signature, append data, and fix-up headers so that the appended data appears to be part of
@@ -783,7 +783,7 @@ class EXE(Target):
                 logger.info(
                     "Rewriting the executable's macOS SDK version (%d.%d.%d) to match the SDK version of the Python "
                     "library (%d.%d.%d) in order to avoid inconsistent behavior and potential UI issues in the "
-                    "frozen application.", *exe_version, *pylib_version
+                    "frozen application.", exe_version, pylib_version
                 )
                 osxutils.set_macos_sdk_version(build_name, *pylib_version)
 

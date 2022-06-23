@@ -37,12 +37,13 @@ from ._compat import BytesIO, StringIO, pathname2url, _READ_MODE
 BOM = codecs.BOM_UTF8.decode('utf-8')
 
 
-class BUILTIN_MODULE:
+class BUILTIN_MODULE(object):
+    @staticmethod
     def is_package(fqname):
         return False
 
 
-class NAMESPACE_PACKAGE:
+class NAMESPACE_PACKAGE(object):
     def __init__(self, namespace_dirs):
         self.namespace_dirs = namespace_dirs
 
@@ -321,7 +322,7 @@ class DependencyInfo (namedtuple("DependencyInfo",
 #erroneously tests whether "module.packagepath is not None" to determine
 #whether a node is a package or not. However, "isinstance(module, Package)" is
 #a significantly more reliable test. Refactor the former into the latter.
-class Node:
+class Node(object):
     """
     Abstract base class (ABC) of all objects added to a `ModuleGraph`.
 
@@ -2092,9 +2093,9 @@ class ModuleGraph(ObjectGraph):
         return module
 
     def _load_module(self, fqname, pathname, loader):
-        from importlib._bootstrap_external import ExtensionFileLoader
+        # from importlib._bootstrap_external import ExtensionFileLoader
         self.msgin(2, "load_module", fqname, pathname,
-                   loader.__class__.__name__)
+                   loader)
         partname = fqname.rpartition(".")[-1]
 
         if loader.is_package(partname):
@@ -2116,10 +2117,11 @@ class ModuleGraph(ObjectGraph):
                 m.filename = '-'
                 m.packagepath = ns_pkgpath
             else:
-                if isinstance(loader, ExtensionFileLoader):
-                    m = self.createNode(ExtensionPackage, fqname)
-                else:
-                    m = self.createNode(Package, fqname)
+                # if isinstance(loader, ExtensionFileLoader):
+                #     m = self.createNode(ExtensionPackage, fqname)
+                # else:
+                #     m = self.createNode(Package, fqname)
+                m = self.createNode(Package, fqname)
                 m.filename = pathname
                 # PEP-302-compliant loaders return the pathname of the
                 # `__init__`-file, not the packge directory.
@@ -2137,8 +2139,8 @@ class ModuleGraph(ObjectGraph):
         co = None
         if loader is BUILTIN_MODULE:
             cls = BuiltinModule
-        elif isinstance(loader, ExtensionFileLoader):
-            cls = Extension
+        # elif isinstance(loader, ExtensionFileLoader):
+        #     cls = Extension
         else:
             src = loader.get_source(partname)
             if src is not None:
@@ -3081,7 +3083,7 @@ class ModuleGraph(ObjectGraph):
         mods = scripts
 
         title = "modulegraph cross reference for " + ', '.join(scriptnames)
-        print(header % {"TITLE": title}, file=out)
+        out.write(header % {"TITLE": title})
 
         def sorted_namelist(mods):
             lst = [os.path.basename(mod.identifier) for mod in mods if mod]
@@ -3118,8 +3120,8 @@ class ModuleGraph(ObjectGraph):
                 # does't supprot them.
                 links = " &#8226; ".join(links)
                 content += imports % {"HEAD": "imported by", "LINKS": links}
-            print(entry % {"NAME": name, "CONTENT": content}, file=out)
-        print(footer, file=out)
+            out.write(entry % {"NAME": name, "CONTENT": content})
+        out.write(footer)
 
     def itergraphreport(self, name='G', flatpackages=()):
         # XXX: Can this be implemented using Dot()?

@@ -65,7 +65,7 @@ skipif_no_compiler = skipif(not has_compiler, reason="Requires a C compiler")
 skip = pytest.mark.skip
 
 
-def importorskip(package: str):
+def importorskip(package):
     """
     Skip a decorated test if **package** is not importable.
 
@@ -80,11 +80,11 @@ def importorskip(package: str):
     polluted, which then breaks later builds.
     """
     if not importable(package):
-        return pytest.mark.skip(f"Can't import '{package}'.")
-    return pytest.mark.skipif(False, reason=f"Don't skip: '{package}' is importable.")
+        return pytest.mark.skip("Can't import '{package}'.")
+    return pytest.mark.skipif(False, reason="Don't skip: '{package}' is importable.")
 
 
-def importable(package: str):
+def importable(package):
     from importlib.util import find_spec
 
     # The find_spec() function is used by the importlib machinery to locate a module to import. Using it finds the
@@ -100,7 +100,7 @@ def importable(package: str):
     return find_spec(package) is not None
 
 
-def requires(requirement: str):
+def requires(requirement):
     """
     Mark a test to be skipped if **requirement** is not satisfied.
 
@@ -117,7 +117,7 @@ def requires(requirement: str):
     import pkg_resources
     try:
         pkg_resources.require(requirement)
-        return pytest.mark.skipif(False, reason=f"Don't skip: '{requirement}' is satisfied.")
+        return pytest.mark.skipif(False, reason="Don't skip: '{requirement}' is satisfied.")
     except pkg_resources.ResolutionError:
         return pytest.mark.skip("Requires " + requirement)
 
@@ -148,7 +148,7 @@ def gen_sourcefile(tmpdir, source, test_id=None):
     testname = testname.replace('.', '_')
     scriptfile = tmpdir / (testname + '.py')
     source = textwrap.dedent(source)
-    with scriptfile.open('w', encoding='utf-8') as ofh:
-        print('# -*- coding: utf-8 -*-', file=ofh)
-        print(source, file=ofh)
+    with scriptfile.open('w', ) as ofh: # FIXME(EK) encoding
+        print('# -*- coding: utf-8 -*-', ofh)
+        print(source, ofh)
     return scriptfile

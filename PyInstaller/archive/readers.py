@@ -121,7 +121,7 @@ class CArchiveReader(ArchiveReader):
 
         # A CArchive created from scratch starts at 0, no leading bootloader.
         self.pkg_start = 0
-        super().__init__(archive_path, start)
+        super(CArchiveReader,self).__init__(archive_path, start)
 
     def checkmagic(self):
         """

@@ -13,8 +13,7 @@ import copy
 import os
 import sys
 import textwrap
-from pathlib import Path
-from typing import Callable, Tuple
+from pathlib2 import Path
 
 import pkg_resources
 
@@ -101,7 +100,7 @@ def exec_statement_rc(statement):
     return __exec_statement(statement, capture_stdout=False)
 
 
-def __exec_script(script_filename, *args, env=None, capture_stdout=True):
+def __exec_script(script_filename,env=None, capture_stdout=True, *args):
     """
     Executes a Python script in an externally spawned interpreter. If capture_stdout is set to True, returns anything
     that was emitted in the standard output as a single string. Otherwise, returns the exit code.
@@ -122,7 +121,7 @@ def __exec_script(script_filename, *args, env=None, capture_stdout=True):
     return __exec_python_cmd(cmd, env=env, capture_stdout=capture_stdout)
 
 
-def exec_script(script_filename, *args, env=None):
+def exec_script(script_filename, env=None, *args):
     """
     Executes a Python script in an externally spawned interpreter, and returns anything that was emitted to the standard
     output as a single string.
@@ -133,7 +132,7 @@ def exec_script(script_filename, *args, env=None):
     return __exec_script(script_filename, *args, env=env, capture_stdout=True)
 
 
-def exec_script_rc(script_filename, *args, env=None):
+def exec_script_rc(script_filename, env=None, *args):
     """
     Executes a Python script in an externally spawned interpreter, and returns the exit code.
 
@@ -168,7 +167,7 @@ def eval_statement(statement):
     return eval(txt)
 
 
-def eval_script(scriptfilename, *args, env=None):
+def eval_script(scriptfilename, env=None, *args):
     txt = exec_script(scriptfilename, *args, env=env).strip()
     if not txt:
         # Return an empty string, which is "not true" but is iterable.
@@ -176,7 +175,7 @@ def eval_script(scriptfilename, *args, env=None):
     return eval(txt)
 
 
-@isolated.decorate
+# @isolated.decorate
 def get_pyextension_imports(module_name):
     """
     Return list of modules required by binary (C/C++) Python extension.
@@ -266,7 +265,7 @@ def remove_file_extension(filename):
     return os.path.splitext(filename)[0]
 
 
-@isolated.decorate
+# @isolated.decorate
 def can_import_module(module_name):
     """
     Check if the specified module can be imported.
@@ -317,7 +316,7 @@ def get_module_attribute(module_name, attr_name):
     AttributeError
         If this attribute is undefined.
     """
-    @isolated.decorate
+    # @isolated.decorate
     def _get_module_attribute(module_name, attr_name):
         import importlib
         module = importlib.import_module(module_name)
@@ -327,7 +326,7 @@ def get_module_attribute(module_name, attr_name):
     try:
         return _get_module_attribute(module_name, attr_name)
     except Exception as e:
-        raise AttributeError(f"Failed to retrieve attribute {attr_name} from module {module_name}") from e
+        raise AttributeError("Failed to retrieve attribute {attr_name} from module {module_name}") #from e
 
 
 def get_module_file_attribute(package):
@@ -365,7 +364,7 @@ def get_module_file_attribute(package):
             pass
 
     # Second attempt: try to obtain module/package's __file__ attribute in an isolated subprocess.
-    @isolated.decorate
+    # @isolated.decorate
     def _get_module_file_attribute(package):
         # First try to use 'pkgutil'; it returns the filename even if the module or package cannot be imported
         # (e.g., C-extension module with missing dependencies).
@@ -388,7 +387,7 @@ def get_module_file_attribute(package):
     try:
         filename = _get_module_file_attribute(package)
     except Exception as e:
-        raise ImportError(f"Failed to obtain the __file__ attribute of package/module {package}!") from e
+        raise ImportError("Failed to obtain the __file__ attribute of package/module {package}!") #from e
 
     return filename
 
@@ -579,7 +578,7 @@ def get_package_paths(package):
     """
     pkg_paths = get_all_package_paths(package)
     if not pkg_paths:
-        raise ValueError(f"Package '{package}' does not exist or is not a package!")
+        raise ValueError("Package '{package}' does not exist or is not a package!")
 
     if len(pkg_paths) > 1:
         logger.warning(
@@ -592,7 +591,7 @@ def get_package_paths(package):
     return pkg_base, pkg_dir
 
 
-def collect_submodules(package: str, filter: Callable[[str], bool] = lambda name: True, on_error="warn once"):
+def collect_submodules(package, filter = lambda name: True, on_error="warn once"):
     """
     List all submodules of a given package.
 
@@ -631,7 +630,7 @@ def collect_submodules(package: str, filter: Callable[[str], bool] = lambda name
         raise TypeError('package must be a str')
     if on_error not in ("ignore", "warn once", "warn", "raise"):
         raise ValueError(
-            f"Invalid on-error action '{on_error}': Must be one of ('ignore', 'warn once', 'warn', 'raise')"
+            "Invalid on-error action '{on_error}': Must be one of ('ignore', 'warn once', 'warn', 'raise')"
         )
 
     logger.debug('Collecting submodules for %s' % package)
@@ -653,7 +652,7 @@ def collect_submodules(package: str, filter: Callable[[str], bool] = lambda name
     return modules
 
 
-@isolated.decorate
+# @isolated.decorate
 def _collect_submodules(pkg_dir, package, on_error):
     import sys
     import pkgutil
@@ -684,11 +683,11 @@ def _collect_submodules(pkg_dir, package, on_error):
                 if on_error in ("warn", "warn once"):
                     from PyInstaller.log import logger
                     ex = "".join(format_exception_only(type(ex), ex)).strip()
-                    logger.warning(f"Failed to collect submodules for '{name}' because importing '{name}' raised: {ex}")
+                    logger.warning("Failed to collect submodules for '{name}' because importing '{name}' raised: {ex}")
                     if on_error == "warn once":
                         on_error = "ignore"
                 elif on_error == "raise":
-                    raise ImportError(f"Unable to load submodule '{name}'.") from ex
+                    raise ImportError("Unable to load submodule '{name}'.") #from ex
                 # Don't attempt to recurse to submodules if this module didn't even make it into sys.modules.
                 if name not in sys.modules:
                     continue
@@ -960,7 +959,7 @@ def copy_metadata(package_name, recursive=False):
             dist_src = _resolve_legacy_metadata_path(dist)
             if dist_src is None:
                 raise RuntimeError(
-                    f"No metadata path found for distribution '{dist.project_name}' (legacy fallback search failed)."
+                    "No metadata path found for distribution '{dist.project_name}' (legacy fallback search failed)."
                 )
             out.append((dist_src, '.'))  # It is a file, so dest path needs to be '.'
 
@@ -972,7 +971,7 @@ def copy_metadata(package_name, recursive=False):
     return out
 
 
-def _normalise_dist(name: str) -> str:
+def _normalise_dist(name) :
     return name.lower().replace("_", "-")
 
 
@@ -991,15 +990,15 @@ def _resolve_legacy_metadata_path(dist):
     candidates = [
         # This fallback was in place in pre-#5774 times. However, it is insufficient, because dist.egg_name() may be
         # greenlet-0.4.15-py3.8 (Ubuntu 20.04 package) while the file we are searching for is greenlet-0.4.15.egg-info.
-        f"{dist.egg_name()}.egg-info",
+        "{}.egg-info".format(dist.egg_name()),
         # The extra name-version.egg-info path format
-        f"{dist.project_name}-{dist.version}.egg-info",
+        "{}-{}.egg-info".format(dist.project_name,dist.version),
         # And the name_with_underscores-version.egg-info.format
-        f"{dist.project_name.replace('-', '_')}-{dist.version}.egg-info",
+        "{}-{}.egg-info".format(dist.project_name.replace('-', '_'),dist.version),
     ]
 
     # As an additional attempt, try to remove the-pyX.Y suffix from egg name.
-    pyxx_suffix = f"-py{sys.version_info[0]}.{sys.version_info[1]}"
+    pyxx_suffix = "-py{}.{}".format(sys.version_info[0],sys.version_info[1])
     if dist.egg_name().endswith(pyxx_suffix):
         candidates.append(dist.egg_name()[:-len(pyxx_suffix)] + ".egg-info")
 
@@ -1011,7 +1010,7 @@ def _resolve_legacy_metadata_path(dist):
     return None
 
 
-def _copy_metadata_dest(egg_path: str, project_name: str) -> str:
+def _copy_metadata_dest(egg_path, project_name) :
     """
     Choose an appropriate destination path for a distribution's metadata.
 
@@ -1030,7 +1029,7 @@ def _copy_metadata_dest(egg_path: str, project_name: str) -> str:
     if egg_path is None:
         # According to older implementations of this function, packages may have no metadata. I have no idea how this
         # can happen...
-        raise RuntimeError(f"No metadata path found for distribution '{project_name}'.")
+        raise RuntimeError("No metadata path found for distribution '{project_name}'.")
 
     egg_path = Path(egg_path)
     _project_name = _normalise_dist(project_name)
@@ -1056,8 +1055,8 @@ def _copy_metadata_dest(egg_path: str, project_name: str) -> str:
 
     # This is something unheard of.
     raise RuntimeError(
-        f"Unknown metadata type '{egg_path}' from the '{project_name}' distribution. Please report this at "
-        f"https://github/pyinstaller/pyinstaller/issues."
+        "Unknown metadata type '{egg_path}' from the '{project_name}' distribution. Please report this at "
+        "https://github/pyinstaller/pyinstaller/issues."
     )
 
 
@@ -1174,7 +1173,7 @@ def collect_all(
     exclude_datas=None,
     include_datas=None,
     on_error="warn once",
-) -> Tuple[list, list, list]:
+):
     """
     Collect everything for a given package name.
 
@@ -1222,7 +1221,7 @@ def collect_all(
     return datas, binaries, hiddenimports
 
 
-def collect_entry_point(name: str) -> Tuple[list, list]:
+def collect_entry_point(name) :
     """
     Collect modules and metadata for all exporters of a given entry point.
 

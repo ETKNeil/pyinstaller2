@@ -703,7 +703,7 @@ class Manifest:
             domtree = minidom.parse(filename_or_file)
         except xml.parsers.expat.ExpatError as e:
             args = ['\n  File "%r"\n   ' % filename, str(e.args[0])]
-            raise ManifestXMLParseError(" ".join(args)) from e
+            raise ManifestXMLParseError(" ".join(args)) #from e
         if initialize:
             self.__init__()
         self.filename = filename
@@ -716,7 +716,7 @@ class Manifest:
         try:
             domtree = minidom.parseString(xmlstr)
         except xml.parsers.expat.ExpatError as e:
-            raise ManifestXMLParseError(e) from e
+            raise ManifestXMLParseError(e) #from e
         self.load_dom(domtree, initialize)
 
     def same_id(self, manifest, skip_version_check=False):

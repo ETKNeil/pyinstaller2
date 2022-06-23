@@ -234,7 +234,7 @@ class Splash(Target):
         # library).
         if is_win or is_cygwin:
             EXTRA_REQUIREMENTS = {'vcruntime140.dll'}
-            self.splash_requirements.update([name for name, *_ in binaries if name.lower() in EXTRA_REQUIREMENTS])
+            self.splash_requirements.update([name for name, _ in binaries if name.lower() in EXTRA_REQUIREMENTS])
 
         # Check if all requirements were found.
         fnames = [toc[0] for toc in (binaries + datas + self.binaries)]

@@ -13,21 +13,21 @@ Various classes and functions to provide some backwards-compatibility with previ
 """
 
 import errno
+import imp
 
-import importlib.machinery
-import importlib.util
 import os
 import platform
 import site
 import subprocess
 import sys
 import shutil
+from future_builtins import ascii
 
 from PyInstaller._shared_with_waf import _pyi_machine
 from PyInstaller.exceptions import ExecCommandFailed
 
 # Copied from https://docs.python.org/3/library/platform.html#cross-platform.
-is_64bits = sys.maxsize > 2**32
+is_64bits = sys.maxsize > 2 ** 32
 
 # Distinguish specific code for various Python versions. Variables 'is_pyXY' mean that Python X.Y and up is supported.
 # Keep even unsupported versions here to keep 3rd-party hooks working.
@@ -58,7 +58,9 @@ is_unix = is_linux or is_solar or is_aix or is_freebsd or is_hpux or is_openbsd
 
 # Linux distributions such as Alpine or OpenWRT use musl as their libc implementation and resultantly need specially
 # compiled bootloaders. On musl systems, ldd with no arguments prints 'musl' and its version.
-is_musl = is_linux and "musl" in subprocess.getoutput(["ldd"])
+process = subprocess.Popen(['ldd'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+out, err = process.communicate()
+is_musl = is_linux and "musl" in out
 
 # macOS version
 _macos_ver = tuple(int(x) for x in platform.mac_ver()[0].split('.')) if is_darwin else None
@@ -135,7 +137,7 @@ open_file = open
 text_read_mode = 'r'
 
 # In Python 3 built-in function raw_input() was renamed to just 'input()'.
-stdin_input = input
+stdin_input = raw_input
 
 # Safe repr that always outputs ascii
 safe_repr = ascii
@@ -185,11 +187,11 @@ if is_ms_app_store:
         )
 
 # Bytecode magic value
-BYTECODE_MAGIC = importlib.util.MAGIC_NUMBER
+BYTECODE_MAGIC = imp.get_magic()
 
 # List of suffixes for Python C extension modules.
-EXTENSION_SUFFIXES = importlib.machinery.EXTENSION_SUFFIXES
-ALL_SUFFIXES = importlib.machinery.all_suffixes()
+EXTENSION_SUFFIXES = [suffix for (suffix, mode, type) in imp.get_suffixes() if type == imp.C_EXTENSION]
+ALL_SUFFIXES = [suffix for (suffix, _, _) in imp.get_suffixes()]
 
 # On Windows we require pywin32-ctypes.
 # -> all pyinstaller modules should use win32api from PyInstaller.compat to
@@ -219,7 +221,7 @@ if is_win:
 # macOS's platform.architecture() can be buggy, so we do this manually here. Based off the python documentation:
 # https://docs.python.org/3/library/platform.html#platform.architecture
 if is_darwin:
-    architecture = '64bit' if sys.maxsize > 2**32 else '32bit'
+    architecture = '64bit' if sys.maxsize > 2 ** 32 else '32bit'
 else:
     architecture = platform.architecture()[0]
 
@@ -260,9 +262,11 @@ def is_wine_dll(filename):
 if is_win:
     try:
         import ctypes.util  # noqa: E402
+
         is_win_wine = is_wine_dll(ctypes.util.find_library('kernel32'))
     except Exception:
         pass
+
 
 # Set and get environment variables does not handle unicode strings correctly on Windows.
 
@@ -271,7 +275,7 @@ if is_win:
 # better to modify os.environ." (Same for unsetenv.)
 
 
-def getenv(name, default=None) -> str:
+def getenv(name, default=None):
     """
     Returns unicode string containing value of environment variable 'name'.
     """
@@ -298,7 +302,7 @@ def unsetenv(name):
 # Exec commands in subprocesses.
 
 
-def exec_command(*cmdargs: str, encoding: str = None, raise_enoent: bool = None, **kwargs):
+def exec_command(encoding=None, raise_enoent=None, *cmdargs, **kwargs):
     """
     Run the command specified by the passed positional arguments, optionally configured by the passed keyword arguments.
 
@@ -351,11 +355,11 @@ def exec_command(*cmdargs: str, encoding: str = None, raise_enoent: bool = None,
     except OSError as e:
         if raise_enoent and e.errno == errno.ENOENT:
             raise
-        print('--' * 20, file=sys.stderr)
-        print("Error running '%s':" % " ".join(cmdargs), file=sys.stderr)
-        print(e, file=sys.stderr)
-        print('--' * 20, file=sys.stderr)
-        raise ExecCommandFailed("Error: Executing command failed!") from e
+        print('--' * 20, sys.stderr)
+        print("Error running '%s':" % " ".join(cmdargs), sys.stderr)
+        print(e, sys.stderr)
+        print('--' * 20, sys.stderr)
+        raise ExecCommandFailed("Error: Executing command failed!")
     except subprocess.TimeoutExpired:
         proc.kill()
         raise
@@ -369,15 +373,15 @@ def exec_command(*cmdargs: str, encoding: str = None, raise_enoent: bool = None,
             out = os.fsdecode(out)
     except UnicodeDecodeError as e:
         # The sub-process used a different encoding; provide more information to ease debugging.
-        print('--' * 20, file=sys.stderr)
-        print(str(e), file=sys.stderr)
-        print('These are the bytes around the offending byte:', file=sys.stderr)
-        print('--' * 20, file=sys.stderr)
+        print('--' * 20, sys.stderr)
+        print(str(e), sys.stderr)
+        print('These are the bytes around the offending byte:', sys.stderr)
+        print('--' * 20, sys.stderr)
         raise
     return out
 
 
-def exec_command_rc(*cmdargs: str, **kwargs) -> int:
+def exec_command_rc(*cmdargs, **kwargs):
     """
     Return the exit code of the command specified by the passed positional arguments, optionally configured by the
     passed keyword arguments.
@@ -405,7 +409,7 @@ def exec_command_rc(*cmdargs: str, **kwargs) -> int:
     return subprocess.call(cmdargs, **kwargs)
 
 
-def exec_command_stdout(*command_args: str, encoding: str = None, **kwargs) -> str:
+def exec_command_stdout(encoding=None, *command_args, **kwargs):
     """
     Capture and return the standard output of the command specified by the passed positional arguments, optionally
     configured by the passed keyword arguments.
@@ -451,7 +455,7 @@ def exec_command_stdout(*command_args: str, encoding: str = None, **kwargs) -> s
     return stdout if encoding is None else stdout.decode(encoding)
 
 
-def exec_command_all(*cmdargs: str, encoding: str = None, **kwargs):
+def exec_command_all(encoding=None, *cmdargs, **kwargs):
     """
     Run the command specified by the passed positional arguments, optionally configured by the passed keyword arguments.
 
@@ -501,10 +505,10 @@ def exec_command_all(*cmdargs: str, encoding: str = None, **kwargs):
             err = os.fsdecode(err)
     except UnicodeDecodeError as e:
         # The sub-process used a different encoding, provide more information to ease debugging.
-        print('--' * 20, file=sys.stderr)
-        print(str(e), file=sys.stderr)
-        print('These are the bytes around the offending byte:', file=sys.stderr)
-        print('--' * 20, file=sys.stderr)
+        print('--' * 20, sys.stderr)
+        print(str(e), sys.stderr)
+        print('These are the bytes around the offending byte:', sys.stderr)
+        print('--' * 20, sys.stderr)
         raise
 
     return proc.returncode, out, err
@@ -545,7 +549,8 @@ def __wrap_python(args, kwargs):
     # Ensure python 3 subprocess writes 'str' as utf-8
     env['PYTHONIOENCODING'] = 'UTF-8'
     # ... and ensure we read output as utf-8
-    kwargs['encoding'] = 'UTF-8'
+    # FIXME we disabled encoding use io.open then
+    # kwargs['encoding'] = 'UTF-8'
 
     return cmdargs, kwargs
 
@@ -616,8 +621,9 @@ getsitepackages = getattr(site, 'getsitepackages', getsitepackages)
 # Wrapper to load a module from a Python source file. This function loads import hooks when processing them.
 def importlib_load_source(name, pathname):
     # Import module from a file.
-    mod_loader = importlib.machinery.SourceFileLoader(name, pathname)
-    return mod_loader.load_module()
+    return imp.load_source(name, pathname)
+    # mod_loader = importlib.machinery.SourceFileLoader(name, pathname)
+    # return mod_loader.load_module()
 
 
 # Patterns of module names that should be bundled into the base_library.zip.
@@ -625,12 +631,12 @@ def importlib_load_source(name, pathname):
 PY3_BASE_MODULES = {
     # These modules are direct or indirect dependencies of encodings.* modules. encodings modules must be recursively
     # included to set the I/O encoding during python startup.
-    '_collections_abc',
+    # '_collections_abc',
     '_weakrefset',
     'abc',
     'codecs',
     'collections',
-    'copyreg',
+    # 'copyreg',
     'encodings',
     'enum',
     'functools',
@@ -641,7 +647,7 @@ PY3_BASE_MODULES = {
     'locale',
     'operator',
     're',
-    'reprlib',
+    # 'reprlib',
     'sre_compile',
     'sre_constants',
     'sre_parse',
@@ -653,7 +659,8 @@ PY3_BASE_MODULES = {
 }
 
 if not is_py310:
-    PY3_BASE_MODULES.add('_bootlocale')
+    # PY3_BASE_MODULES.add('_bootlocale')
+    pass
 
 # Object types of Pure Python modules in modulegraph dependency graph.
 # Pure Python modules have code object (attribute co_code).
@@ -738,8 +745,8 @@ def check_requirements():
     Fail hard if any requirement is not met.
     """
     # Fail hard if Python does not have minimum required version
-    if sys.version_info < (3, 7):
-        raise EnvironmentError('PyInstaller requires at Python 3.7 or newer.')
+    if sys.version_info < (2, 7):
+        raise EnvironmentError('PyInstaller requires at Python 2.7 or newer. (now :)')
 
     # There are some old packages which used to be backports of libraries which are now part of the standard library.
     # These backports are now unmaintained and contain only an older subset of features leading to obscure errors like
@@ -749,20 +756,20 @@ def check_requirements():
     else:
         from importlib_metadata import distribution, PackageNotFoundError
 
-    for name in ["enum34", "typing"]:
-        try:
-            distribution(name)
-        except PackageNotFoundError:
-            pass
-        else:
-            raise SystemExit(
-                f"The '{name}' package is an obsolete backport of a standard library package and is "
-                f"incompatible with PyInstaller. Please "
-                f"`{'conda remove' if is_conda else 'pip uninstall'} {name}` then try again."
-            )
-
+    # for name in ["enum34", "typing"]:
+    #     try:
+    #         distribution(name)
+    #     except PackageNotFoundError:
+    #         pass
+    #     else:
+    #         raise SystemExit(
+    #             "The '{}' package is an obsolete backport of a standard library package and is "
+    #             "incompatible with PyInstaller. Please "
+    #             "`{} {}` then try again.".format(name, 'conda remove' if is_conda else 'pip uninstall', name)
+    #         )
+    from distutils.spawn import find_executable
     # Bail out if binutils is not installed.
-    if is_linux and shutil.which("objdump") is None:
+    if is_linux and find_executable("objdump") is None:
         raise SystemExit(
             "On Linux, objdump is required. It is typically provided by the 'binutils' package "
             "installable via your Linux distribution's package manager."

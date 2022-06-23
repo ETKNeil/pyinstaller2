@@ -22,7 +22,7 @@ class Popen(subprocess.Popen):
 
         def _get_handles(self, stdin, stdout, stderr):
             stdin, stdout, stderr = (subprocess.DEVNULL if pipe is None else pipe for pipe in (stdin, stdout, stderr))
-            return super()._get_handles(stdin, stdout, stderr)
+            return super(Popen,self)._get_handles(stdin, stdout, stderr)
 
 
 subprocess.Popen = Popen

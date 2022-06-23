@@ -47,15 +47,16 @@ def run_pytest(*args, **kwargs):
     paths = paths_to_test(include_only=kwargs.pop("include_only", None))
     # Return an error code if no tests were discovered.
     if not paths:
-        print("Error: no tests discovered.", file=sys.stderr)
+        print("Error: no tests discovered.", sys.stderr)
         # This indicates no tests were discovered; see
         # https://docs.pytest.org/en/latest/usage.html#possible-exit-codes.
         return 5
     else:
         # See https://docs.pytest.org/en/latest/usage.html#calling-pytest-from-python-code.
         # Omit ``args[0]``, which is the name of this script.
-        print("pytest " + " ".join([*paths, *args[1:]]))
-        return pytest.main([*paths, *args[1:]], **kwargs)
+        paths.append(args[1:])
+        print("pytest " + " ".join(paths))
+        return pytest.main(paths, **kwargs)
 
 
 if __name__ == "__main__":

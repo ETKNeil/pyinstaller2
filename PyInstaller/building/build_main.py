@@ -1,4 +1,4 @@
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Copyright (c) 2005-2022, PyInstaller Development Team.
 #
 # Distributed under the terms of the GNU General Public License (version 2
@@ -7,13 +7,16 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 #
 # SPDX-License-Identifier: (GPL-2.0-or-later WITH Bootloader-exception)
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 """
 Build packages using spec files.
 
 NOTE: All global variables, classes and imported modules create API for .spec files.
 """
-
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
 import glob
 import os
 import pprint
@@ -90,7 +93,6 @@ def setupUPXFlags():
     compat.setenv("UPX", f)
 
 
-@isolated.decorate
 def discover_hook_directories():
     """
     Discover hook directories via pkg_resources and pyinstaller40 entry points. Perform the discovery in a subprocess
@@ -98,16 +100,17 @@ def discover_hook_directories():
 
     :return: list of discovered hook directories.
     """
-
     import sys  # noqa: F401
     from traceback import format_exception_only
     import pkg_resources
     from PyInstaller.log import logger
 
+    logger.warning("qweeqw")
     entry_points = pkg_resources.iter_entry_points('pyinstaller40', 'hook-dirs')
 
     hook_directories = []
     for entry_point in entry_points:
+        logger.debug(entry_point)
         try:
             hook_directories.extend(entry_point.load()())
         except Exception as e:
@@ -233,7 +236,7 @@ class Analysis(Target):
         noarchive
                 If True, do not place source files in a archive, but keep them as individual files.
         """
-        super().__init__()
+        super(Analysis, self).__init__()
         from PyInstaller.config import CONF
 
         self.inputs = []
@@ -253,7 +256,7 @@ class Analysis(Target):
 
         # Django hook requires this variable to find the script manage.py.
         CONF['main_script'] = self.inputs[0]
-
+        logger.info(pathex)
         self.pathex = self._extend_pathex(pathex, self.inputs)
         # Set global config variable 'pathex' to make it available for PyInstaller.utils.hooks and import hooks. Path
         # extensions for module search.
@@ -261,7 +264,6 @@ class Analysis(Target):
         # Extend sys.path so PyInstaller could find all necessary modules.
         logger.info('Extending PYTHONPATH with paths\n' + pprint.pformat(self.pathex))
         sys.path.extend(self.pathex)
-
         # If pkg_resources has already been imported, force update of its working set to account for changes made to
         # sys.path. Otherwise, distribution data in the added path(s) may not be discovered.
         if 'pkg_resources' in sys.modules:
@@ -277,15 +279,18 @@ class Analysis(Target):
         # Include modules detected when parsing options, like 'codecs' and encodings.
         self.hiddenimports.extend(CONF['hiddenimports'])
 
+        logger.debug("Here1")
         self.hookspath = []
         # Append directories in `hookspath` (`--additional-hooks-dir`) to take precedence over those from the entry
         # points.
         if hookspath:
             self.hookspath.extend(hookspath)
 
+        logger.debug("Here2")
         # Add hook directories from PyInstaller entry points.
         self.hookspath += discover_hook_directories()
 
+        logger.debug("Here3")
         self.hooksconfig = {}
         if hooksconfig:
             self.hooksconfig.update(hooksconfig)
@@ -298,7 +303,7 @@ class Analysis(Target):
             # Create a Python module which contains the decryption key which will be used at runtime by
             # pyi_crypto.PyiBlockCipher.
             pyi_crypto_key_path = os.path.join(CONF['workpath'], 'pyimod00_crypto_key.py')
-            with open(pyi_crypto_key_path, 'w', encoding='utf-8') as f:
+            with open(pyi_crypto_key_path, 'w', ) as f:  # FIXME(EK) encoding
                 f.write('# -*- coding: utf-8 -*-\nkey = %r\n' % cipher.key)
             self.hiddenimports.append('tinyaes')
 
@@ -376,6 +381,7 @@ class Analysis(Target):
             logger.debug('script: %s' % script)
             script_toplevel_dir = get_path_to_toplevel_modules(script)
             if script_toplevel_dir:
+                logger.debug("Adding this path {}".format(script_toplevel_dir))
                 pathex.append(script_toplevel_dir)
         # Append paths from .spec.
         if spec_pathex is not None:
@@ -506,7 +512,7 @@ class Analysis(Target):
                 ctypes_binaries = scan_code_for_ctypes(co)
                 self.binaries.extend(set(ctypes_binaries))
             except Exception as ex:
-                raise RuntimeError(f"Failed to scan the module '{name}'. " f"This is a bug. Please report it.") from ex
+                raise RuntimeError("Failed to scan the module '{}'. This is a bug. Please report it.".format(name))
 
         self.datas.extend((dest, source, "DATA")
                           for (dest, source) in format_binaries_and_datas(self.graph.metadata_required()))
@@ -543,7 +549,9 @@ class Analysis(Target):
 
         collected_packages = self.graph.get_collected_packages()
         self.binaries.extend(
-            isolated.call(find_binary_dependencies, list(self.binaries), self.binding_redirects, collected_packages)
+            # isolated.call(find_binary_dependencies, list(self.binaries), self.binding_redirects, collected_packages)
+            find_binary_dependencies(list(self.binaries), self.binding_redirects, collected_packages)
+
         )
 
         # Include zipped Python eggs.
@@ -601,6 +609,7 @@ class Analysis(Target):
         Write warnings about missing modules. Get them from the graph and use the graph to figure out who tried to
         import them.
         """
+
         def dependency_description(name, dep_info):
             if not dep_info or dep_info == 'direct':
                 imptype = 0
@@ -610,18 +619,11 @@ class Analysis(Target):
 
         from PyInstaller.config import CONF
         miss_toc = self.graph.make_missing_toc()
-        with open(CONF['warnfile'], 'w', encoding='utf-8') as wf:
+        with open(CONF['warnfile'], 'w') as wf:  # FIXME encoding
             wf.write(WARNFILE_HEADER)
             for (n, p, status) in miss_toc:
                 importers = self.graph.get_importers(n)
-                print(
-                    status,
-                    'module named',
-                    n,
-                    '- imported by',
-                    ', '.join(dependency_description(name, data) for name, data in importers),
-                    file=wf
-                )
+                wf.write('{} module named {} - imported by {}{}'.format(status, n, ', '.join(dependency_description(name, data) for name, data in importers),os.linesep))
         logger.info("Warnings written to %s", CONF['warnfile'])
 
     def _write_graph_debug(self):
@@ -629,14 +631,14 @@ class Analysis(Target):
         Write a xref (in html) and with `--log-level DEBUG` a dot-drawing of the graph.
         """
         from PyInstaller.config import CONF
-        with open(CONF['xref-file'], 'w', encoding='utf-8') as fh:
+        with open(CONF['xref-file'], 'w') as fh:  # FIXME encoding
             self.graph.create_xref(fh)
             logger.info("Graph cross-reference written to %s", CONF['xref-file'])
         if logger.getEffectiveLevel() > logging.DEBUG:
             return
         # The `DOT language's <https://www.graphviz.org/doc/info/lang.html>`_ default character encoding (see the end
         # of the linked page) is UTF-8.
-        with open(CONF['dot-file'], 'w', encoding='utf-8') as fh:
+        with open(CONF['dot-file'], 'w') as fh:  # FIXME encoding
             self.graph.graphreport(fh)
             logger.info("Graph drawing written to %s", CONF['dot-file'])
 
@@ -721,7 +723,10 @@ def build(spec, distpath, workpath, clean_build):
 
     # Create DISTPATH and workpath if they does not exist.
     for pth in (CONF['distpath'], CONF['workpath']):
-        os.makedirs(pth, exist_ok=True)
+        try:
+            os.makedirs(pth)
+        except OSError:
+            pass
 
     # Construct NAMESPACE for running the Python code from .SPEC file.
     # NOTE: Passing NAMESPACE allows to avoid having global variables in this module and makes isolated environment for
@@ -760,8 +765,8 @@ def build(spec, distpath, workpath, clean_build):
             # ... then let Python determine the encoding, since ``compile`` accepts byte strings.
             code = compile(f.read(), spec, 'exec')
     except FileNotFoundError:
-        raise SystemExit(f'Spec file "{spec}" not found!')
-    exec(code, spec_namespace)
+        raise SystemExit('Spec file "{}" not found!'.format(spec))
+    exec (code, spec_namespace)
 
 
 def __add_options(parser):
@@ -782,7 +787,7 @@ def __add_options(parser):
         action="store_true",
         default=False,
         help="Replace output directory (default: %s) without asking for confirmation" %
-        os.path.join('SPECPATH', 'dist', 'SPECNAME'),
+             os.path.join('SPECPATH', 'dist', 'SPECNAME'),
     )
     parser.add_argument(
         '--upx-dir',

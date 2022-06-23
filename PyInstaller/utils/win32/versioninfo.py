@@ -144,7 +144,7 @@ class VSVersionInfo:
             "# For more details about fixed file info 'ffi' see:",
             "# http://msdn.microsoft.com/en-us/library/ms646997.aspx",
             "VSVersionInfo(",
-            indent + f"ffi={self.ffi.__str__(indent)},",
+            indent + "ffi={},".format(self.ffi.__str__(indent)),
             indent + "kids=[",
             tmp,
             indent + "]",
@@ -405,7 +405,7 @@ class StringTable:
     def __str__(self, indent=''):
         new_indent = indent + '  '
         tmp = (',\n' + new_indent).join(str(kid) for kid in self.kids)
-        return f"{indent}StringTable(\n{new_indent}'{self.name}',\n{new_indent}[{tmp}])"
+        return "{}StringTable(\n{}'{}',\n{}[{}])".format(indent,new_indent,self.name,new_indent,tmp)
 
     def __repr__(self):
         return 'versioninfo.StringTable(%r, %r)' % (self.name, self.kids)

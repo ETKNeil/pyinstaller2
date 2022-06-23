@@ -5,8 +5,8 @@
 
 ## IMPORTANT: Keep aligned with setup.cfg
 
-setuptools
-altgraph
+setuptools~=44.1.1
+altgraph~=0.17.2
 pyinstaller-hooks-contrib >= 2021.4
 pefile; sys_platform == 'win32'
 pywin32-ctypes; sys_platform == 'win32'
@@ -14,3 +14,10 @@ macholib; sys_platform == 'darwin'
 importlib-metadata ; python_version < '3.8'
 
 ## IMPORTANT: Keep aligned with setup.cfg
+
+pyinstaller~=5.1
+pytest~=4.6.11
+py~=1.10.0
+pathlib2~=2.3.6
+requests~=2.26.0
+wheel~=0.37.0
